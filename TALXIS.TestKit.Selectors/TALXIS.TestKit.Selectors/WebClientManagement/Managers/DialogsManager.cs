@@ -221,7 +221,8 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
         {
             return Client.Execute<bool>(Client.GetOptions("Check If Dialog Is Visible"), driver =>
             {
-                return driver.IsVisible(By.CssSelector($"div[role='dialog']"));
+                // Blocking dialogs (e.g. TALXIS Portal form dialogs, Fluent UI isBlocking) use the alertdialog role.
+                return driver.IsVisible(By.CssSelector("div[role='dialog'], div[role='alertdialog']"));
             });
         }
 

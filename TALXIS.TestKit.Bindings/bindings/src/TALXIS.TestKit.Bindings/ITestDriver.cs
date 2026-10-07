@@ -11,7 +11,9 @@
         /// Injects the driver onto the current page.
         /// </summary>
         /// <param name="authToken">The application user auth token (if configured).</param>
-        void InjectOnPage(string authToken);
+        /// <param name="dataverseUrl">The URL of a separate Dataverse environment holding the test data (if configured).</param>
+        /// <param name="suppressFlows">Whether test data operations of the application user should not trigger Power Automate flows.</param>
+        void InjectOnPage(string authToken, string dataverseUrl, bool suppressFlows);
 
         /// <summary>
         /// Loads scenario test data.

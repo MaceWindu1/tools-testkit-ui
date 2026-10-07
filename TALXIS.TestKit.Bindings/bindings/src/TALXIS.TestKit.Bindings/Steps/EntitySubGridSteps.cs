@@ -25,8 +25,14 @@
         [When(@"I click the '(.*)' command on the '(.*)' subgrid")]
         public static void WhenISelectTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
-            Driver.WaitUntilAvailable(
-                By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subGridName)));
+            // The command bar is only rendered once the subgrid's ribbon has loaded.
+            Driver
+                .WaitUntilAvailable(
+                    By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subGridName)),
+                    $"Could not find the {subGridName} subgrid.")
+                .WaitUntilAvailable(
+                    By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandBar]),
+                    $"Could not find the command bar of the {subGridName} subgrid.");
 
             XrmApp.Entity.SubGrid.ClickCommand(subGridName, commandName);
         }
@@ -255,6 +261,42 @@
         public static void ThenIShouldNotBeAbleToSeeTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
             XrmApp.Entity.SubGrid.TryToFindAssertSubgridCommand(commandName, subGridName).Should().BeNull();
+        }
+
+        /// <summary>
+        /// Asserts that a subgrid command is present and enabled. Distinct from visibility: some
+        /// commands stay in the DOM (just greyed out) when their EnableRule evaluates to false,
+        /// rather than being removed by a DisplayRule.
+        /// </summary>
+        /// <param name="commandName">The name of the command.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [Then(@"the '(.*)' command on the '(.*)' subgrid should be enabled")]
+        public static void ThenTheCommandOnTheSubgridShouldBeEnabled(string commandName, string subGridName)
+        {
+            IsSubgridCommandEnabled(commandName, subGridName).Should().BeTrue(because: $"the '{commandName}' command should be enabled");
+        }
+
+        /// <summary>
+        /// Asserts that a subgrid command is present but disabled.
+        /// </summary>
+        /// <param name="commandName">The name of the command.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [Then(@"the '(.*)' command on the '(.*)' subgrid should be disabled")]
+        public static void ThenTheCommandOnTheSubgridShouldBeDisabled(string commandName, string subGridName)
+        {
+            IsSubgridCommandEnabled(commandName, subGridName).Should().BeFalse(because: $"the '{commandName}' command should be disabled");
+        }
+
+        private static bool IsSubgridCommandEnabled(string commandName, string subGridName)
+        {
+            var command = XrmApp.Entity.SubGrid.TryToFindAssertSubgridCommand(commandName, subGridName);
+
+            command.Should().NotBeNull(because: $"the '{commandName}' command should be present (visible-but-disabled, not hidden) on the '{subGridName}' subgrid");
+
+            var ariaDisabled = command!.GetAttribute("aria-disabled");
+            var disabled = command.GetAttribute("disabled");
+
+            return ariaDisabled != "true" && string.IsNullOrEmpty(disabled);
         }
 
         /// <summary>

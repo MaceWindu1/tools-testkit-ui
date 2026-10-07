@@ -14,14 +14,25 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
 
   private readonly metadataRepo: MetadataRepository;
 
+  private readonly apiUrl: string;
+
   /**
    * Creates an instance of AuthenticatedRecordRepository.
    * @param metadataRepo A metadata repository.
    * @param authToken The auth token for the impersonating user.
    * @param userToImpersonateId An optional ID for an impersonated user.
+   * @param apiUrl The Web API URL. Defaults to the Web API of the current page's origin.
+   * @param suppressFlows Whether the requests should not trigger Power Automate flows.
    */
-  constructor(metadataRepo: MetadataRepository, authToken: string, userToImpersonateId?: string) {
+  constructor(
+    metadataRepo: MetadataRepository,
+    authToken: string,
+    userToImpersonateId?: string,
+    apiUrl = 'api/data/v9.1/',
+    suppressFlows = false,
+  ) {
     this.metadataRepo = metadataRepo;
+    this.apiUrl = apiUrl;
 
     this.headers = {
       Authorization: `Bearer ${authToken}`,
@@ -30,6 +41,11 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
 
     if (userToImpersonateId) {
       this.headers.CallerObjectId = userToImpersonateId;
+    }
+
+    if (suppressFlows) {
+      // Test data must not trigger flows that integrate with other systems, where it does not exist.
+      this.headers['MSCRM.SuppressCallbackRegistrationExpanderJob'] = 'true';
     }
   }
 
@@ -49,7 +65,7 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
    */
   public async retrieveRecord(logicalName: string, id: string, query?: string): Promise<any> {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(logicalName);
-    const res = await fetch(`api/data/v9.1/${entitySet}(${id})${query}`, { headers: this.headers });
+    const res = await fetch(`${this.apiUrl}${entitySet}(${id})${query}`, { headers: this.headers });
 
     await AuthenticatedRecordRepository.checkResponseForError(res);
 
@@ -63,7 +79,7 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
    */
   public async retrieveMultipleRecords(logicalName: string, query?: string): Promise<any> {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(logicalName);
-    const res = await fetch(`api/data/v9.1/${entitySet}${query}`, { headers: this.headers });
+    const res = await fetch(`${this.apiUrl}${entitySet}${query}`, { headers: this.headers });
 
     await AuthenticatedRecordRepository.checkResponseForError(res);
 
@@ -80,7 +96,7 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
      */
   public async createRecord(logicalName: string, record: Record): Promise<Xrm.LookupValue> {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(logicalName);
-    const res = await fetch(`api/data/v9.1/${entitySet}`, {
+    const res = await fetch(`${this.apiUrl}${entitySet}`, {
       headers: this.headers,
       body: JSON.stringify(
           exludeInternalPropertiesFromPayload(record),
@@ -130,7 +146,7 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
      */
   public async deleteRecord(ref: Xrm.LookupValue): Promise<Xrm.LookupValue> {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(ref.entityType);
-    const res = await fetch(`api/data/v9.1/${entitySet}(${ref.id})`,
+    const res = await fetch(`${this.apiUrl}${entitySet}(${ref.id})`,
       {
         headers: this.headers,
         method: 'DELETE',
@@ -159,7 +175,7 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
     const entitySetB = await this.metadataRepo.getEntitySetForEntity(relatedRecords[0].entityType);
 
     await Promise.all(relatedRecords.map(async (r) => {
-      const res = await fetch(`api/data/v9.1/${entitySetA}(${primaryRecord.id})/${relationship}/$ref`,
+      const res = await fetch(`${this.apiUrl}${entitySetA}(${primaryRecord.id})/${relationship}/$ref`,
         {
           headers: this.headers,
           body: JSON.stringify({ '@odata.id': `${entitySetB}(${r.id})` }),
@@ -172,7 +188,7 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
 
   public async updateRecord(logicalName: string, id: string, record: any) {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(logicalName);
-    const res = await fetch(`api/data/v9.1/${entitySet}(${id})`,
+    const res = await fetch(`${this.apiUrl}${entitySet}(${id})`,
       {
         headers: this.headers,
         body: JSON.stringify(

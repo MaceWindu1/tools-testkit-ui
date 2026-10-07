@@ -18,6 +18,8 @@
             this.BrowserOptions = configuration.GetSection("BrowserOptions").Get<BrowserOptionsWithProfileSupport>();
             this.Users = configuration.GetSection("Users").Get<List<UserConfiguration>>();
             this.Url = configuration["Url"];
+            this.DataverseUrl = configuration["DataverseUrl"];
+            this.SuppressFlowsForTestData = configuration.GetValue<bool>("SuppressFlowsForTestData");
             this.UseProfiles = configuration.GetValue<bool>("UseProfiles");
             this.DeleteTestData = configuration.GetValue<bool>("DeleteTestData");
             this.ProfilesBasePath = configuration["ProfilesBasePath"];
@@ -31,6 +33,18 @@
         /// Gets or sets the URL of the target PowerApps instance.
         /// </summary>
         public string Url { get; set; }
+
+        /// <summary>
+        /// Gets or sets the URL of the Dataverse environment holding the test data, when it is not the app under test
+        /// (e.g. a TALXIS Portal). When set, test data is created and deleted by the application user through its Web API.
+        /// </summary>
+        public string DataverseUrl { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether creating and deleting test data should not trigger Power Automate flows
+        /// (e.g. integrations with systems where the test data does not exist). Applies to data handled by the application user.
+        /// </summary>
+        public bool SuppressFlowsForTestData { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to use profiles.

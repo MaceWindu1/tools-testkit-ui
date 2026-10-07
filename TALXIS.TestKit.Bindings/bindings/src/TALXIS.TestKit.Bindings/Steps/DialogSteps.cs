@@ -103,5 +103,17 @@
 
             dialogText.Should().Be(expectedTitle);
         }
+
+        /// <summary>
+        /// Asserts that a confirmation dialog with the given title is displayed.
+        /// </summary>
+        /// <param name="expectedTitle">The title of the confirmation dialog that is expected.</param>
+        [Then(@"a confirmation dialog with title '(.*)' should be displayed")]
+        public static void ThenAConfirmationDialogWithTitleShouldBeDisplayed(string expectedTitle)
+        {
+            XrmApp.Dialogs.IsDialogVisible().Should().BeTrue(because: "a confirmation dialog should be displayed");
+
+            XrmApp.Dialogs.GetCurrentDialogLable().Should().Be(expectedTitle);
+        }
     }
 }

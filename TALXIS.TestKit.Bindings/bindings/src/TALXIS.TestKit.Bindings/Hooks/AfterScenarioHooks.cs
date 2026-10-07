@@ -2,6 +2,7 @@
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Reflection;
     using System.Threading;
     using OpenQA.Selenium;
@@ -66,7 +67,15 @@
                 Directory.CreateDirectory(screenshotsFolder);
             }
 
-            var fileName = string.Concat(this.scenarioContext.ScenarioInfo.Title.Split(Path.GetInvalidFileNameChars()));
+            var title = this.scenarioContext.ScenarioInfo.Title;
+            var arguments = this.scenarioContext.ScenarioInfo.Arguments;
+            if (arguments?.Count > 0)
+            {
+                // Scenario Outline examples share the title; keep a screenshot per example.
+                title += $" ({string.Join(", ", arguments.Values.Cast<object>())})";
+            }
+
+            var fileName = string.Concat(title.Split(Path.GetInvalidFileNameChars()));
 
             try
             {

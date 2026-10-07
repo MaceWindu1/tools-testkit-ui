@@ -6,6 +6,7 @@
     using System.Linq;
     using FluentAssertions;
     using OpenQA.Selenium;
+    using OpenQA.Selenium.Support.UI;
     using Reqnroll;
     using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors;
@@ -17,6 +18,8 @@
     [Binding]
     public class CustomDialogSteps : PowerAppsStepDefiner
     {
+        private static readonly TimeSpan DialogStateTimeout = TimeSpan.FromSeconds(10);
+
         /// <summary>
         /// Click a button on a custom dialog.
         /// </summary>
@@ -25,7 +28,97 @@
         [When(@"I click the '(.*)' button on the displayed dialog")]
         public static void WhenIClickButtonOnCustomDialog(string buttonLabel)
         {
-            bool isNewLookEnabled = AppLookExtensions.IsNewLookEnabled(Driver);
+            XrmApp.Dialogs.SelectButtonInDialogWindow(buttonLabel);
+        }
+
+        /// <summary>
+        /// Asserts that a button is not present on the displayed dialog.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible title or aria-label.</param>
+        [Then(@"I should not be able to see the '(.*)' button on the displayed dialog")]
+        public static void ThenIShouldNotBeAbleToSeeTheButtonOnTheDisplayedDialog(string buttonLabel)
+        {
+            var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
+
+            var matches = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
+
+            matches.Should().BeEmpty(because: $"the '{buttonLabel}' button should not be present on the displayed dialog");
+        }
+
+        /// <summary>
+        /// Closes the displayed dialog via its own close ('x') control, without saving.
+        /// </summary>
+        [When(@"I close the displayed dialog without saving")]
+        public static void WhenICloseTheDisplayedDialogWithoutSaving()
+        {
+            var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
+
+            var closeButton = dialog.FindElement(By.XPath(".//button[@aria-label='Close' or @title='Close']"));
+            closeButton.Click();
+
+            Driver.WaitForTransaction();
+        }
+
+        /// <summary>
+        /// Repeatedly clicks a button on the displayed dialog until it is no longer present. Useful
+        /// for a multi-step/wizard-style dialog's own "Continue"/"Next" button, to reach its last step
+        /// without knowing how many steps it has.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible title or aria-label.</param>
+        [When(@"I click the '(.*)' button on the displayed dialog repeatedly until it is no longer available")]
+        public static void WhenIClickTheButtonOnTheDisplayedDialogRepeatedlyUntilItIsNoLongerAvailable(string buttonLabel)
+        {
+            const int maxClicks = 50; // safety cap against an infinite loop if the button never disappears
+            for (int i = 0; i < maxClicks && TryClickButtonOnDisplayedDialog(buttonLabel); i++)
+            {
+            }
+        }
+
+        /// <summary>
+        /// Repeatedly clicks a button on the displayed dialog until an element containing the given
+        /// text becomes visible. Useful for navigating a multi-step/wizard-style dialog to a specific
+        /// step by its label, without a known step-index mapping.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible title or aria-label.</param>
+        /// <param name="text">Text expected to become visible once the target step is reached.</param>
+        [When(@"I click the '(.*)' button on the displayed dialog repeatedly until '(.*)' is visible")]
+        public static void WhenIClickTheButtonOnTheDisplayedDialogRepeatedlyUntilIsVisible(string buttonLabel, string text)
+        {
+            const int maxClicks = 50;
+            for (int i = 0; i < maxClicks; i++)
+            {
+                if (IsTextVisible(text))
+                {
+                    return;
+                }
+
+                if (!TryClickButtonOnDisplayedDialog(buttonLabel))
+                {
+                    break;
+                }
+            }
+
+            IsTextVisible(text).Should().BeTrue(because: $"'{text}' should become visible after repeatedly clicking '{buttonLabel}'");
+        }
+
+        private static bool IsTextVisible(string text)
+        {
+            return Driver.FindElements(By.XPath($"//*[contains(text(), '{text}')]")).Count > 0;
+        }
+
+        private static bool TryClickButtonOnDisplayedDialog(string buttonLabel)
+        {
+            var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
+            var buttons = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
+
+            if (buttons.Count == 0)
+            {
+                return false;
+            }
+
+            buttons[0].Click();
+            Driver.WaitForTransaction();
+            return true;
         }
 
         /// <summary>
@@ -69,11 +162,21 @@
 
             bool shouldBeVisible = shouldOrShouldNot.Equals("should", StringComparison.InvariantCultureIgnoreCase);
 
-            XrmApp.Dialogs.IsDialogVisible()
+            // Dialogs open and close asynchronously (e.g. in TALXIS Portal, where WaitForTransaction does not apply).
+            bool isInExpectedState;
+            try
+            {
+                isInExpectedState = new WebDriverWait(Driver, DialogStateTimeout)
+                    .Until(_ => XrmApp.Dialogs.IsDialogVisible() == shouldBeVisible);
+            }
+            catch (WebDriverTimeoutException)
+            {
+                isInExpectedState = false;
+            }
+
+            isInExpectedState
                 .Should()
-                .Be(
-                    shouldBeVisible,
-                    because: $"A dialog {(shouldBeVisible ? "should" : "should not")} be displayed.");
+                .BeTrue(because: $"A dialog {(shouldBeVisible ? "should" : "should not")} be displayed.");
         }
 
         /// <summary>

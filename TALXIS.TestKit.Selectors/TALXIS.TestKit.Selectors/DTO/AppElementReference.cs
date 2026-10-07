@@ -505,12 +505,14 @@ namespace TALXIS.TestKit.Selectors
             { "Entity_SubGrid_Row"           , "//div[@data-id='[NAME]-pcf_grid_control_container']//div[@data-id='grid-container']//div[@data-list-index=\'[INDEX]\']"},
             { "Entity_SubGrid_LastRow"           , "//div[@ref='centerContainer']//div[@role='rowgroup']//div[contains(@class, 'ag-row-last')]"},
             { "Entity_SubGridTitle", "//div[contains(text(), '[NAME]')]" },
-            { "Entity_SubGridContents", "//div[@id=\"dataSetRoot_[NAME]\"]" },
+            // TALXIS Portal renders the subgrid root with data-id instead of id.
+            { "Entity_SubGridContents", "//div[@id=\"dataSetRoot_[NAME]\" or @data-id=\"dataSetRoot_[NAME]\"]" },
             { "Entity_SubGridList", "//div[@data-id='[NAME]-pcf_grid_control_container']//div[@data-id='grid-container']//div[@data-automationid='ListCell']" },
             { "Entity_SubGridListCells", ".//div[@class='ag-center-cols-viewport']//div[@role='rowgroup']//div[@row-index]" },
             { "Entity_SubGridViewPickerButton", ".//span[contains(@id, 'ViewSelector') and contains(@id, 'button')]" },
             { "Entity_SubGridViewPickerFlyout", "//div[contains(@id, 'ViewSelector') and contains(@flyoutroot, 'flyoutRootNode')]" },
-            { "Entity_SubGridCommandBar", ".//ul[contains(@data-id, 'CommandBar')]" },
+            // TALXIS Portal renders the subgrid's ribbon (a Fluent CommandBar) before the subgrid root, not inside it.
+            { "Entity_SubGridCommandBar", ".//ul[contains(@data-id, 'CommandBar')] | ./ancestor::section[contains(@class, 'TALXIS__portal__view-page')][1]//div[contains(@class, 'TALXIS__ribbon')]//div[contains(@class, 'ms-CommandBar')]" },
             { "Entity_SubGridCommandLabel", ".//button//span[text()=\"[NAME]\"]" },
             { "Entity_SubGridOverflowContainer", ".//div[contains(@data-id, 'flyoutRootNode')]" },
             { "Entity_SubGridCommandOverflowButton", ".//button[contains(@data-id, 'OverflowButton')]" },

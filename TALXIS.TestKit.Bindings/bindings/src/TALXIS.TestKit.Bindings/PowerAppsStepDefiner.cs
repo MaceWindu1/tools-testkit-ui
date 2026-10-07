@@ -51,9 +51,12 @@
             get
             {
                 var hostSegments = TestConfig.GetTestUrl().Host.Split('.');
+                var scope = string.IsNullOrEmpty(TestConfig.DataverseUrl)
+                    ? $"https://{hostSegments[0]}.api.{hostSegments[1]}.dynamics.com//.default"
+                    : $"{new Uri(TestConfig.DataverseUrl).GetLeftPart(UriPartial.Authority)}/.default";
 
                 return GetApp()
-                    .AcquireTokenForClient(new string[] { $"https://{hostSegments[0]}.api.{hostSegments[1]}.dynamics.com//.default" })
+                    .AcquireTokenForClient(new string[] { scope })
                     .ExecuteAsync()
                     .Result.AccessToken;
             }
@@ -163,7 +166,8 @@
                 if (testDriver == null)
                 {
                     testDriver = new TestDriver((IJavaScriptExecutor)Driver);
-                    testDriver.InjectOnPage(TestConfig.ApplicationUser != null ? AccessToken : null);
+                    var useApplicationUser = TestConfig.ApplicationUser != null || !string.IsNullOrEmpty(TestConfig.DataverseUrl);
+                    testDriver.InjectOnPage(useApplicationUser ? AccessToken : null, TestConfig.DataverseUrl, TestConfig.SuppressFlowsForTestData);
                 }
 
                 return testDriver;
@@ -259,6 +263,13 @@
             if (TestConfig.ApplicationUser == null)
             {
                 throw new ConfigurationErrorsException("An application user has not been configured.");
+            }
+
+            if (string.IsNullOrEmpty(TestConfig.ApplicationUser.TenantId)
+                || string.IsNullOrEmpty(TestConfig.ApplicationUser.ClientId)
+                || string.IsNullOrEmpty(TestConfig.ApplicationUser.ClientSecret))
+            {
+                throw new ConfigurationErrorsException("The application user needs a tenantId, clientId and clientSecret.");
             }
 
             if (app == null)
