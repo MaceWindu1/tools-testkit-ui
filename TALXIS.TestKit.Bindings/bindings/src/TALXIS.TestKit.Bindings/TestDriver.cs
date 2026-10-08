@@ -100,15 +100,22 @@
         /// <inheritdoc cref="ITestDriver"/>
         public void LoadTestData(string data)
         {
-            this.ExecuteDriverFunctionAsync($"loadTestData(`{data}`)");
+            this.ExecuteDriverFunctionAsync($"loadTestData(`{EscapeForTemplateLiteral(data)}`)");
             this.SaveDataManagerState();
         }
 
         /// <inheritdoc/>
         public void LoadTestDataAsUser(string data, string username)
         {
-            this.ExecuteDriverFunctionAsync($"loadTestDataAsUser(`{data}`, '{username}')");
+            this.ExecuteDriverFunctionAsync($"loadTestDataAsUser(`{EscapeForTemplateLiteral(data)}`, '{username}')");
             this.SaveDataManagerState();
+        }
+
+        // The data file's JSON is passed in a JavaScript template literal, where backslashes (e.g. of an escaped quote in a
+        // JSON string), backticks and '${' would otherwise be interpreted.
+        private static string EscapeForTemplateLiteral(string text)
+        {
+            return text.Replace("\\", "\\\\").Replace("`", "\\`").Replace("${", "\\${");
         }
 
         /// <inheritdoc cref="ITestDriver"/>

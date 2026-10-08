@@ -12,12 +12,22 @@ describe('FakerPreprocessor', () => {
 
   describe('.preprocess(data)', () => {
     it('calls faker.fake on data', async () => {
-      const data = { foo: 'bar' };
+      const data = { foo: '{{name.firstName}}' };
       fakeSpy.and.returnValue('baz');
 
       fakerPreprocessor.preprocess(data);
 
-      expect(fakeSpy).toHaveBeenCalledWith('bar');
+      expect(fakeSpy).toHaveBeenCalledWith('{{name.firstName}}');
+    });
+
+    it('leaves strings without a template unchanged', () => {
+      const data = { foo: 'bar', json: '{"header":{"number":1}}' };
+
+      const result = fakerPreprocessor.preprocess(data);
+
+      expect(fakeSpy).not.toHaveBeenCalled();
+      expect(result.foo).toBe('bar');
+      expect(result.json).toBe('{"header":{"number":1}}');
     });
 
     it('replaces @faker.number properties with number equivalent', () => {

@@ -22,7 +22,8 @@ export default class FakerPreprocessor extends Preprocessor {
         fakedData[key] = value.map((arrayItem) => JSON.parse(this.fake(arrayItem as Record)));
       } else if (typeof value === 'object' && value !== null) {
         fakedData[key] = JSON.parse(this.fake(value as Record));
-      } else if (typeof value === 'string') {
+      } else if (typeof value === 'string' && value.includes('{{')) {
+        // faker.fake misreads a string with '}}' but no '{{' (e.g. a JSON document in a text column) as a template.
         fakedData[key] = faker.fake(value);
       }
     });
