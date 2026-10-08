@@ -11,9 +11,8 @@ namespace TALXIS.TestKit.Bindings.Steps
     /// file downloaded" API; this uses the common workaround of watching the OS Downloads folder for
     /// a new file created since the scenario started.
     ///
-    /// Assumes the browser is using its default download directory and default "just download,
-    /// don't prompt" behaviour. If a project's BrowserOptions configures a different download
-    /// directory, adjust <see cref="DownloadsDirectory"/> accordingly.
+    /// Watches the browser's download directory: browserOptions.downloadsPath when configured, otherwise the user's
+    /// Downloads folder (the browser's default "just download, don't prompt" behaviour is assumed).
     /// </summary>
     [Binding]
     public class FileDownloadSteps : PowerAppsStepDefiner
@@ -21,7 +20,9 @@ namespace TALXIS.TestKit.Bindings.Steps
         private static DateTime scenarioStartedAtUtc;
 
         private static string DownloadsDirectory =>
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            string.IsNullOrEmpty(TestConfig.BrowserOptions?.DownloadsPath)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
+                : TestConfig.BrowserOptions.DownloadsPath;
 
         [BeforeScenario]
         public static void RecordScenarioStartTime()
