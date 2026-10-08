@@ -186,7 +186,7 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
     }));
   }
 
-  public async updateRecord(logicalName: string, id: string, record: any) {
+  public async updateRecord(logicalName: string, id: string, record: any): Promise<Xrm.LookupValue> {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(logicalName);
     const res = await fetch(`${this.apiUrl}${entitySet}(${id})`,
       {
@@ -199,7 +199,8 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
 
     await AuthenticatedRecordRepository.checkResponseForError(res);
 
-    return res.json();
+    // An update answers 204 No Content.
+    return { entityType: logicalName, id };
   }
 
   // eslint-disable-next-line no-undef
