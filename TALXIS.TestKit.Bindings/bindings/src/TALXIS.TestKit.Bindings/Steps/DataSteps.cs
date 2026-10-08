@@ -3,6 +3,7 @@
     using System;
     using Reqnroll;
     using TALXIS.TestKit.Bindings;
+    using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors.Browser;
 
     /// <summary>
@@ -31,7 +32,7 @@
         [Given(@"'(.*)' exists")]
         public static void GivenIHaveCreated(string fileName)
         {
-            TestDriver.LoadTestData(TestDataRepository.GetTestData(fileName));
+            TestDriver.LoadTestData(TestDataRepository.GetTestData(fileName).ReplaceParameters(TestConfig.Parameters));
 
             Driver.WaitForTransaction();
         }
@@ -61,7 +62,7 @@
         public static void GivenIHaveCreated(string alias, string fileName)
         {
             TestDriver.LoadTestDataAsUser(
-                TestDataRepository.GetTestData(fileName),
+                TestDataRepository.GetTestData(fileName).ReplaceParameters(TestConfig.Parameters),
                 TestConfig.GetUser(alias).Username);
         }
     }

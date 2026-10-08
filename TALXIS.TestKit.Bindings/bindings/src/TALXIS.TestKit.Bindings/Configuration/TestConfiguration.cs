@@ -24,6 +24,9 @@
             this.DeleteTestData = configuration.GetValue<bool>("DeleteTestData");
             this.ProfilesBasePath = configuration["ProfilesBasePath"];
             this.ApplicationUser = configuration.GetSection("applicationUser").Get<ClientCredentials>();
+            this.Parameters = new Dictionary<string, string>(
+                configuration.GetSection("Parameters").Get<Dictionary<string, string>>() ?? new Dictionary<string, string>(),
+                StringComparer.OrdinalIgnoreCase);
 
             // TODO: Make this overrideable from config
             //this.BrowserOptions.DriversPath
@@ -64,6 +67,12 @@
         public List<UserConfiguration> Users { get; set; }
 
         public ClientCredentials ApplicationUser { get; set; }
+
+        /// <summary>
+        /// Gets or sets named values that data files and step arguments reference as <c>{{Parameter:Name}}</c>, e.g. the
+        /// identifiers of the test records a runner uses, so that runners can use different records with the same tests.
+        /// </summary>
+        public Dictionary<string, string> Parameters { get; set; }
 
 
         /// <summary>

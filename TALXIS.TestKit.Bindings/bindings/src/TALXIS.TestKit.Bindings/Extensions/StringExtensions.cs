@@ -1,6 +1,7 @@
 ﻿namespace TALXIS.TestKit.Bindings.Extensions
 {
     using System;
+    using System.Collections.Generic;
     using System.Globalization;
     using System.Text.RegularExpressions;
 
@@ -9,14 +10,39 @@
     /// </summary>
     public static class StringExtensions
     {
+        private static readonly Regex ParameterPattern = new Regex(@"{{\s*Parameter\s*:\s*([^}]+?)\s*}}", RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Replaces <c>{{Parameter:Name}}</c> placeholders with configured values and leaves any other text unchanged.
+        /// </summary>
+        /// <param name="input">The input string.</param>
+        /// <param name="parameters">The configured parameters.</param>
+        /// <returns>The resulting string.</returns>
+        public static string ReplaceParameters(this string input, IReadOnlyDictionary<string, string> parameters)
+        {
+            input = input ?? throw new ArgumentNullException(nameof(input));
+
+            return ParameterPattern.Replace(input, match =>
+            {
+                string name = match.Groups[1].Value;
+                if (parameters == null || !parameters.TryGetValue(name, out string value))
+                {
+                    throw new InvalidOperationException($"The parameter '{name}' is not configured. Add it to the 'parameters' section of the test configuration.");
+                }
+
+                return value;
+            });
+        }
+
         /// <summary>
         /// Looks for templated text in string and replaces.
         /// </summary>
         /// <param name="input">The input string.</param>
+        /// <param name="parameters">The configured parameters for <c>{{Parameter:Name}}</c> placeholders.</param>
         /// <returns>The resulting string.</returns>
-        public static string ReplaceTemplatedText(this string input)
+        public static string ReplaceTemplatedText(this string input, IReadOnlyDictionary<string, string> parameters = null)
         {
-            input = input ?? throw new ArgumentNullException(nameof(input));
+            input = input?.ReplaceParameters(parameters) ?? throw new ArgumentNullException(nameof(input));
 
             MatchCollection matches = Regex.Matches(input, "{{.*}}");
             var random = new Random();
