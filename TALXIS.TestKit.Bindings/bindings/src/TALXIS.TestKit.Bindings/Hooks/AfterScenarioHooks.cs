@@ -49,7 +49,7 @@
         }
 
         /// <summary>
-        /// Takes a screenshot of the browser when a test fails.
+        /// Takes a screenshot of the browser and saves the page's HTML when a test fails.
         /// </summary>
         [AfterScenario(Order = 0)]
         public void ScreenshotFailedScenario()
@@ -80,6 +80,9 @@
             try
             {
                 Client.Browser.TakeWindowScreenShot(Path.Combine(screenshotsFolder, $"{fileName}.png"));
+
+                // The page's DOM shows what the steps were looking for when the screenshot does not.
+                File.WriteAllText(Path.Combine(screenshotsFolder, $"{fileName}.html"), Driver.PageSource);
             }
             catch (WebDriverException ex)
             {
