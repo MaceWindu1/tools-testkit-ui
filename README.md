@@ -103,6 +103,32 @@ Scenario: User can create a new account
 
 Alternatively, write your own step bindings (see below).
 
+#### TALXIS Portal
+
+The navigation, tab, field, subgrid, command and dialog steps also work on a TALXIS Portal (signed in with
+`I am logged in to the portal as '<alias>'`), with what the portal renders:
+
+- Navigation items by their label or subarea id. A disabled item is shown with its message
+  (`the '<item>' subarea should be disabled with the message '<message>'`); a hidden item is not rendered.
+- Tabs by their label without the `#Icon#` prefix, or by their name. Fields by their label or logical name; while a
+  form dialog is open, fields are looked up on the dialog.
+- Subgrids by their control name. A command is found by its label, button id, command id, or, when it only shows an
+  icon, by the icon's file name (`'download.svg'`). Commands for one selected record (an enable rule with a selection
+  count of 1..1) are rendered on each record's row; the steps look for them on the rows of the selected records (all
+  rows when none is selected), other commands on the subgrid's ribbon. The portal does not render a command whose
+  rules fail, so a disabled command is one that is not shown. In a subgrid without a selection column, selecting a
+  record clicks a plain cell of its row, or, when that does not select it, makes its row the one the command steps
+  look at.
+- A subgrid shown with the legacy view (e.g. in a nested form) has no record ids in the page; its records are found by
+  a displayed value. In a grouped legacy view the grouped column's value is shown only in the group header: the steps
+  expand the matching group and use its rows, or, when the group cannot be expanded (an aggregated row whose expander
+  the page hides), the header, which then shows the commands.
+- Row buttons of a dataset grid (notification expressions) by their title, aria-label or text, or, for an icon-only
+  button that shows its label only in a tooltip, by its Fluent icon name (`'ClipboardList'`).
+- Checks that something is not shown wait until it is gone and stays gone for a few seconds, since scripts hide
+  navigation items and tabs after the page loads and grids refresh after a command.
+- Values of tab labels, dialog titles and field values can reference parameters (`{{Parameter:Name}}`, see below).
+
 ### Writing step bindings
 
 You can write your own step bindings that have thread-safe access to EasyRepro and the Selenium WebDriver. This ensures that your tests can be run safely in parallel. You can do this by creating a class decorated with the reqnroll `Binding` attribute and inheriting from the `PowerAppsStepDefiner` base class. You can then create your reqnroll step bindings by interacting with the `XrmApp` and `Driver` properties.
@@ -194,6 +220,9 @@ In addition to the standard Web API syntax, we also have the following:
 | @alias       | a friendly alias that can be used to reference the created record in certain bindings. Can be set on nested records                                          | Optional                                                 |
 | @extends     | a relative path to a data file to extend. Records in arrays are merged by index (you may need to include blank objects to insert new records into the array) | Optional                                                 |
 
+Dataverse creates every record active. A record with an inactive `statecode` (and its `statuscode`) is created active and
+its state is set once it and its related records exist.
+
 #### Dynamic data
 
 We support [faker.js](https://github.com/marak/Faker.js) moustache template syntax for generating dynamic test data at run-time. Please refer to the faker documentation for all of the functionality that is available. The below JSON will generate a contact with a random name, credit limit, email address, and date of birth in the past 90 years:
@@ -214,6 +243,27 @@ We support [faker.js](https://github.com/marak/Faker.js) moustache template synt
 When using faker syntax, you must also annotate number or date fields using `@faker.number`, `@faker.date` or `@faker.dateonly` to ensure that the JSON is formatted correctly.
 
 You can also dynamically set lookups by alias using `<lookup>@alias.bind` (this is limited to aliased records in other files – not the current file).
+
+#### Parameters
+
+Data files and the values entered by field steps (e.g. `I enter '...' into the '...' field`) can reference named values from the `parameters` section of the configuration as `{{Parameter:Name}}`. Use them for identifiers that differ between runners or environments, such as the existing records a test runs against, so that each runner can use its own records with the same feature and data files:
+
+```json
+"parameters": {
+  "TestAccountId": "11111111-2222-3333-4444-555555555555",
+  "TestAccountNumber": "ACC-0001"
+}
+```
+
+```json
+{
+  "@logicalName": "contact",
+  "lastname": "Contact of {{Parameter:TestAccountNumber}}",
+  "parentcustomerid_account@odata.bind": "/accounts({{Parameter:TestAccountId}})"
+}
+```
+
+Values are inserted as they are, so in data files they must not contain characters that need escaping in JSON. Override them per runner like any other setting, e.g. with user secrets (`Parameters:TestAccountId`) or environment variables (`Parameters__TestAccountId`). A missing parameter fails the step. Custom step bindings can resolve their arguments the same way with `ReplaceParameters(TestConfig.Parameters)`.
 
 #### Record in specific Business Process Flow stage
 
