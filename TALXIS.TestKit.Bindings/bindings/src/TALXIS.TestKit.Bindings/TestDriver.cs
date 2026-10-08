@@ -125,6 +125,14 @@
             this.dataManagerState = null;
         }
 
+        /// <inheritdoc/>
+        public void TrackTestRecord(string logicalName, Guid id)
+        {
+            this.EnsureInjected();
+            this.javascriptExecutor.ExecuteScript("top.dataManager.refs.push({ entityType: arguments[0], id: arguments[1] });", logicalName, id.ToString());
+            this.SaveDataManagerState();
+        }
+
         /// <inheritdoc cref="ITestDriver"/>
         public void OpenTestRecord(string recordAlias)
         {

@@ -1,5 +1,6 @@
 ﻿namespace TALXIS.TestKit.Bindings
 {
+    using System;
     using Microsoft.Xrm.Sdk;
 
     /// <summary>
@@ -32,6 +33,13 @@
         /// Deletes scenario test data.
         /// </summary>
         void DeleteTestData();
+
+        /// <summary>
+        /// Registers a record created outside the test data (e.g. through the UI) so that it is deleted with the test data.
+        /// </summary>
+        /// <param name="logicalName">The logical name of the record's table.</param>
+        /// <param name="id">The ID of the record.</param>
+        void TrackTestRecord(string logicalName, Guid id);
 
         /// <summary>
         /// Open a test record.
