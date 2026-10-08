@@ -17,6 +17,8 @@
     [Binding]
     public class EntitySubGridSteps : PowerAppsStepDefiner
     {
+        private static readonly TimeSpan PortalGridTimeout = TimeSpan.FromSeconds(30);
+
         /// <summary>
         /// Clicks a command on a subgrid.
         /// </summary>
@@ -25,6 +27,15 @@
         [When(@"I click the '(.*)' command on the '(.*)' subgrid")]
         public static void WhenISelectTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                var subGrid = Driver.FindPortalSubGrid(subGridName);
+                Driver.WaitForPortalSubGridCommand(subGrid, commandName)
+                    .Should().BeTrue(because: $"the '{commandName}' command should be available on the '{subGridName}' subgrid");
+                Driver.ClickWhenUnblocked(() => Driver.FindPortalSubGridCommand(subGrid, commandName), PortalGridTimeout, $"The '{commandName}' command on the '{subGridName}' subgrid");
+                return;
+            }
+
             // The command bar is only rendered once the subgrid's ribbon has loaded.
             Driver
                 .WaitUntilAvailable(
@@ -45,6 +56,15 @@
         [When(@"I select '(.*)' from the '(.*)' subgrid")]
         public static void WhenISelectFromTheSubgrid(string alias, string subGridName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                var subGrid = Driver.FindPortalSubGrid(subGridName);
+                var recordId = TestDriver.GetTestRecordReference(alias).Id;
+                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRows(recordId).Count > 0, PortalGridTimeout);
+                Driver.SelectPortalGridRecord(subGrid.FindPortalGridRows(recordId), $"'{alias}'");
+                return;
+            }
+
             var index = GetSubGridItemIndexByAlias(alias, subGridName);
             index.HasValue.Should().BeTrue(because: "the record should be found in the grid");
 
@@ -103,6 +123,15 @@
         [Then(@"I should not be able to see '(.*)' in the '(.*)' subgrid")]
         public static void ThenIShouldNotBeAbleToSeeInTheSubgrid(string alias, string subGridName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                var subGrid = Driver.FindPortalSubGrid(subGridName);
+                var recordId = TestDriver.GetTestRecordReference(alias).Id;
+                Driver.BecomesAbsent(() => subGrid.FindPortalGridRows(recordId).Count > 0, PortalGridTimeout)
+                    .Should().BeTrue(because: $"'{alias}' should not be shown in the '{subGridName}' subgrid");
+                return;
+            }
+
             GetSubGridItemIndexByAlias(alias, subGridName)
                 .HasValue
                 .Should().BeFalse(because: "the record should not exist in the subgrid");
@@ -121,8 +150,9 @@
             // var actualCount = XrmApp.Entity.SubGrid.GetSubGridItemsCount(subGridName);
             // Temporary until XrmApp.Entity.SubGrid.GetSubGridItemsCount(subGridName) works for a count of 0
             // https://github.com/microsoft/EasyRepro/issues/1318
-            var actualCount = (long)Driver.ExecuteScript(
-            $"return Xrm.Page.getControl(\"{subGridName}\").getGrid().getTotalRecordCount();");
+            var actualCount = Driver.IsTalxisPortal()
+                ? Driver.FindPortalSubGrid(subGridName).CountPortalGridRecords()
+                : (long)Driver.ExecuteScript($"return Xrm.Page.getControl(\"{subGridName}\").getGrid().getTotalRecordCount();");
 
 
             switch (compare)
@@ -147,6 +177,15 @@
         [Then(@"the '(.*)' subgrid should contain '(.*)'")]
         public static void ThenTheGridShouldContain(string subGridName, string recordAlias)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                var subGrid = Driver.FindPortalSubGrid(subGridName);
+                var recordId = TestDriver.GetTestRecordReference(recordAlias).Id;
+                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRows(recordId).Count > 0, PortalGridTimeout)
+                    .Should().BeTrue(because: $"'{recordAlias}' should be shown in the '{subGridName}' subgrid");
+                return;
+            }
+
             var index = GetSubGridItemIndexByAlias(recordAlias, subGridName);
 
             index.HasValue.Should().BeTrue(because: "the record should be found in the grid");
@@ -218,6 +257,15 @@
         [Then(@"the '(.*)' subgrid should contain a record with '(.*)' in the '(.*)' (?:text|numeric|currency|lookup|datetime|optionset|multioptionset|boolean) field")]
         public static void ThenTheSubgridShouldContainRecordsWithInTheField(string subGridName, string fieldValue, string fieldName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
+                var subGrid = Driver.FindPortalSubGrid(subGridName);
+                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRowsByValue(fieldName, fieldValue).Count > 0, PortalGridTimeout)
+                    .Should().BeTrue(because: $"a record with '{fieldValue}' in '{fieldName}' should be shown in the '{subGridName}' subgrid");
+                return;
+            }
+
             XrmApp.Entity.SubGrid
                 .GetSubGridItems(subGridName)
                 .Should()
@@ -232,6 +280,13 @@
         [Then(@"I should be able to see the '(.*)' command on the '(.*)' subgrid")]
         public static void ThenIShouldBeAbleToSeeTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.WaitForPortalSubGridCommand(Driver.FindPortalSubGrid(subGridName), commandName)
+                    .Should().BeTrue(because: $"the '{commandName}' command should be shown on the '{subGridName}' subgrid");
+                return;
+            }
+
             Driver
                 .WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subGridName)))
                 .WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandBar]))
@@ -260,6 +315,13 @@
         [Then(@"I should not be able to see the '(.*)' command on the '(.*)' subgrid")]
         public static void ThenIShouldNotBeAbleToSeeTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.IsPortalSubGridCommandUnavailable(Driver.FindPortalSubGrid(subGridName), commandName)
+                    .Should().BeTrue(because: $"the '{commandName}' command should not be shown on the '{subGridName}' subgrid");
+                return;
+            }
+
             XrmApp.Entity.SubGrid.TryToFindAssertSubgridCommand(commandName, subGridName).Should().BeNull();
         }
 
@@ -273,6 +335,12 @@
         [Then(@"the '(.*)' command on the '(.*)' subgrid should be enabled")]
         public static void ThenTheCommandOnTheSubgridShouldBeEnabled(string commandName, string subGridName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                ThenIShouldBeAbleToSeeTheCommandOnTheSubgrid(commandName, subGridName);
+                return;
+            }
+
             IsSubgridCommandEnabled(commandName, subGridName).Should().BeTrue(because: $"the '{commandName}' command should be enabled");
         }
 
@@ -284,6 +352,13 @@
         [Then(@"the '(.*)' command on the '(.*)' subgrid should be disabled")]
         public static void ThenTheCommandOnTheSubgridShouldBeDisabled(string commandName, string subGridName)
         {
+            // The portal does not render commands whose enable rules fail.
+            if (Driver.IsTalxisPortal())
+            {
+                ThenIShouldNotBeAbleToSeeTheCommandOnTheSubgrid(commandName, subGridName);
+                return;
+            }
+
             IsSubgridCommandEnabled(commandName, subGridName).Should().BeFalse(because: $"the '{commandName}' command should be disabled");
         }
 
@@ -341,6 +416,15 @@
         [When(@"I select a record with '(.*)' in the '(.*)' field in the '(.*)' subgrid")]
         public static void WhenISelectARecordWithInTheFieldInTheSubgrid(string fieldValue, string fieldName, string subGridName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
+                var subGrid = Driver.FindPortalSubGrid(subGridName);
+                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRowsByValue(fieldName, fieldValue).Count > 0, PortalGridTimeout);
+                Driver.SelectPortalGridRecord(subGrid.FindPortalGridRowsByValue(fieldName, fieldValue), $"The record with '{fieldValue}' in '{fieldName}'");
+                return;
+            }
+
             List<GridItem> subGridItems = XrmApp.Entity.SubGrid.GetSubGridItems(subGridName);
 
             GridItem subGridItem = subGridItems.FirstOrDefault(item => item.GetAttribute<string>(fieldName) == fieldValue);

@@ -1,27 +1,24 @@
 namespace TALXIS.TestKit.Bindings.Steps
 {
-    using System.Linq;
+    using System;
     using FluentAssertions;
     using OpenQA.Selenium;
     using Reqnroll;
-    using TALXIS.TestKit.Selectors.Browser;
+    using TALXIS.TestKit.Bindings.Extensions;
 
     /// <summary>
-    /// Step bindings for a talxis_TALXIS.PCF.VirtualDataset field-bound grid. This is a custom PCF
-    /// (built on ag-grid) rather than the standard Dynamics grid/subgrid that GridSteps/EntitySubGridSteps
-    /// target, and its inline row buttons (drawn via the dataset client API's
-    /// record.expressions.ui.setNotificationsExpression) are not ribbon commands either.
+    /// Step bindings for a field-bound dataset grid (e.g. the talxis_TALXIS.PCF.VirtualDataset control), whose inline row
+    /// buttons are notification expressions of the dataset client API (record.expressions.ui.setNotificationsExpression)
+    /// rather than ribbon commands.
     ///
-    /// The PCF root element's CSS class is assumed to equal its manifest namespace+constructor
-    /// ("TALXIS.PCF.VirtualDataset"). Rows are matched by ag-grid's conventional `row-id` DOM
-    /// attribute, assumed to be set to the record's GUID. Only one VirtualDataset grid is assumed to
-    /// be visible/relevant at a time; if multiple appear on the same page, these steps will need a
-    /// control-name/alias disambiguator added.
+    /// The grid is an ag-grid whose rows carry the record id as <c>row-id</c> (one element per pinned part of a row), so a
+    /// test record is found by its id wherever the grid is on the page. A row button is named by its title, aria-label or
+    /// text; an icon-only button that shows its label only in a tooltip by its Fluent icon name (e.g. <c>ClipboardList</c>).
     /// </summary>
     [Binding]
     public class VirtualDatasetGridSteps : PowerAppsStepDefiner
     {
-        private const string PcfRootClassName = "TALXIS.PCF.VirtualDataset";
+        private static readonly TimeSpan GridTimeout = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// Asserts that a previously created test record is present in the virtual dataset grid.
@@ -30,7 +27,8 @@ namespace TALXIS.TestKit.Bindings.Steps
         [Then(@"the virtual dataset grid should contain '(.*)'")]
         public static void ThenTheVirtualDatasetGridShouldContain(string recordAlias)
         {
-            TryFindRow(recordAlias).Should().NotBeNull(because: $"'{recordAlias}' should be present in the virtual dataset grid");
+            Driver.WaitForPortalCondition(() => FindRows(recordAlias).Count > 0, GridTimeout)
+                .Should().BeTrue(because: $"'{recordAlias}' should be present in the virtual dataset grid");
         }
 
         /// <summary>
@@ -41,9 +39,9 @@ namespace TALXIS.TestKit.Bindings.Steps
         [When(@"I click the '(.*)' button on '(.*)' in the virtual dataset grid")]
         public static void WhenIClickTheButtonOnInTheVirtualDatasetGrid(string buttonLabel, string recordAlias)
         {
-            var button = FindRowButton(recordAlias, buttonLabel);
-            button.Click();
-            Driver.WaitForTransaction();
+            Driver.WaitForPortalCondition(() => TryFindRowButton(recordAlias, buttonLabel) != null, GridTimeout)
+                .Should().BeTrue(because: $"the '{buttonLabel}' button should be present on '{recordAlias}' to click it");
+            Driver.ClickWhenUnblocked(() => TryFindRowButton(recordAlias, buttonLabel), GridTimeout, $"The '{buttonLabel}' button on '{recordAlias}'");
         }
 
         /// <summary>
@@ -54,7 +52,8 @@ namespace TALXIS.TestKit.Bindings.Steps
         [Then(@"I should be able to see the '(.*)' button on '(.*)' in the virtual dataset grid")]
         public static void ThenIShouldBeAbleToSeeTheButtonOnInTheVirtualDatasetGrid(string buttonLabel, string recordAlias)
         {
-            TryFindRowButton(recordAlias, buttonLabel).Should().NotBeNull(because: $"the '{buttonLabel}' button should be visible on '{recordAlias}'");
+            Driver.WaitForPortalCondition(() => TryFindRowButton(recordAlias, buttonLabel) != null, GridTimeout)
+                .Should().BeTrue(because: $"the '{buttonLabel}' button should be visible on '{recordAlias}'");
         }
 
         /// <summary>
@@ -65,43 +64,20 @@ namespace TALXIS.TestKit.Bindings.Steps
         [Then(@"I should not be able to see the '(.*)' button on '(.*)' in the virtual dataset grid")]
         public static void ThenIShouldNotBeAbleToSeeTheButtonOnInTheVirtualDatasetGrid(string buttonLabel, string recordAlias)
         {
-            TryFindRowButton(recordAlias, buttonLabel).Should().BeNull(because: $"the '{buttonLabel}' button should not be visible on '{recordAlias}'");
+            Driver.WaitForPortalCondition(() => FindRows(recordAlias).Count > 0, GridTimeout)
+                .Should().BeTrue(because: $"'{recordAlias}' should be present in the virtual dataset grid");
+            PortalPageExtensions.StaysAbsent(() => TryFindRowButton(recordAlias, buttonLabel) != null)
+                .Should().BeTrue(because: $"the '{buttonLabel}' button should not be visible on '{recordAlias}'");
         }
 
-        private static IWebElement FindRowButton(string recordAlias, string buttonLabel)
+        private static IWebElement TryFindRowButton(string recordAlias, string buttonLabel)
         {
-            var button = TryFindRowButton(recordAlias, buttonLabel);
-            button.Should().NotBeNull(because: $"the '{buttonLabel}' button should be present on '{recordAlias}' to click it");
-            return button!;
+            return FindRows(recordAlias).FindPortalGridRowButton(buttonLabel);
         }
 
-        private static IWebElement? TryFindRowButton(string recordAlias, string buttonLabel)
+        private static System.Collections.Generic.IReadOnlyList<IWebElement> FindRows(string recordAlias)
         {
-            var row = TryFindRow(recordAlias);
-            if (row is null)
-            {
-                return null;
-            }
-
-            return row
-                .FindElements(By.XPath($".//button[contains(@title, '{buttonLabel}') or contains(@aria-label, '{buttonLabel}') or contains(., '{buttonLabel}')]"))
-                .FirstOrDefault();
-        }
-
-        private static IWebElement? TryFindRow(string recordAlias)
-        {
-            var reference = TestDriver.GetTestRecordReference(recordAlias);
-            var recordId = reference.Id.ToString("D");
-
-            var grid = Driver.FindElements(By.ClassName(PcfRootClassName)).FirstOrDefault();
-            if (grid is null)
-            {
-                return null;
-            }
-
-            return grid
-                .FindElements(By.CssSelector($"[row-id='{recordId}']"))
-                .FirstOrDefault();
+            return Driver.FindPortalGridRows(TestDriver.GetTestRecordReference(recordAlias).Id);
         }
     }
 }

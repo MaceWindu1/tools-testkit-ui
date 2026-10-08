@@ -28,7 +28,44 @@
         [When(@"I click the '(.*)' button on the displayed dialog")]
         public static void WhenIClickButtonOnCustomDialog(string buttonLabel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.ClickPortalDialogButton(buttonLabel);
+                return;
+            }
+
             XrmApp.Dialogs.SelectButtonInDialogWindow(buttonLabel);
+        }
+
+        /// <summary>
+        /// Selects an option of a choice group (e.g. option set tiles) on the displayed dialog.
+        /// </summary>
+        /// <param name="option">The option label.</param>
+        [When(@"I choose the '(.*)' option on the dialog")]
+        public static void WhenIChooseTheOptionOnTheDialog(string option)
+        {
+            Driver.ChoosePortalDialogOption(option);
+        }
+
+        /// <summary>
+        /// Asserts that a button is present on the displayed dialog.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible label, title or aria-label.</param>
+        [Then(@"I should be able to see the '(.*)' button on the displayed dialog")]
+        public static void ThenIShouldBeAbleToSeeTheButtonOnTheDisplayedDialog(string buttonLabel)
+        {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.WaitForPortalCondition(() => Driver.FindPortalDialogButton(buttonLabel) != null, DialogStateTimeout)
+                    .Should().BeTrue(because: $"the '{buttonLabel}' button should be present on the displayed dialog");
+                return;
+            }
+
+            var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
+
+            var matches = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
+
+            matches.Should().NotBeEmpty(because: $"the '{buttonLabel}' button should be present on the displayed dialog");
         }
 
         /// <summary>
@@ -38,6 +75,13 @@
         [Then(@"I should not be able to see the '(.*)' button on the displayed dialog")]
         public static void ThenIShouldNotBeAbleToSeeTheButtonOnTheDisplayedDialog(string buttonLabel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                PortalPageExtensions.StaysAbsent(() => Driver.FindPortalDialogButton(buttonLabel) != null)
+                    .Should().BeTrue(because: $"the '{buttonLabel}' button should not be present on the displayed dialog");
+                return;
+            }
+
             var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
 
             var matches = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
@@ -51,6 +95,14 @@
         [When(@"I close the displayed dialog without saving")]
         public static void WhenICloseTheDisplayedDialogWithoutSaving()
         {
+            if (Driver.IsTalxisPortal())
+            {
+                var modal = Driver.GetTopmostPortalModal();
+                Driver.ClosePortalDialog();
+                Driver.WaitForPortalCondition(() => IsStale(modal), DialogStateTimeout);
+                return;
+            }
+
             var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
 
             var closeButton = dialog.FindElement(By.XPath(".//button[@aria-label='Close' or @title='Close']"));
@@ -103,11 +155,51 @@
 
         private static bool IsTextVisible(string text)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                var modal = Driver.GetTopmostPortalModal();
+                return modal != null && modal.FindElements(By.XPath($".//*[contains(text(), '{text}')]")).Any(e => e.Displayed);
+            }
+
             return Driver.FindElements(By.XPath($"//*[contains(text(), '{text}')]")).Count > 0;
+        }
+
+        private static string GetPortalDialogTitle()
+        {
+            var title = Driver.GetTopmostPortalModal()?.FindElements(By.CssSelector(".ms-Dialog-title, .ms-Panel-headerText")).FirstOrDefault();
+            return title == null ? null : PortalPageExtensions.NormalizeText(title.Text);
+        }
+
+        private static bool IsStale(IWebElement element)
+        {
+            try
+            {
+                return element == null || !element.Displayed;
+            }
+            catch (StaleElementReferenceException)
+            {
+                return true;
+            }
         }
 
         private static bool TryClickButtonOnDisplayedDialog(string buttonLabel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                // A wizard re-renders its footer for the next step; wait for that before looking for the button again.
+                var step = Driver.GetTopmostPortalModal()?.FindElements(By.CssSelector(".TALXIS__form__tab-content, .ms-Dialog-content")).FirstOrDefault();
+                var portalButton = Driver.FindPortalDialogButton(buttonLabel);
+                if (portalButton == null)
+                {
+                    return false;
+                }
+
+                var stepText = step?.Text;
+                portalButton.Click();
+                Driver.WaitForPortalCondition(() => IsStale(portalButton) || IsStale(step) || step.Text != stepText, DialogStateTimeout);
+                return true;
+            }
+
             var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
             var buttons = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
 
@@ -144,9 +236,15 @@
         [When("^I enter '(.*)' into the '(.*)' field on the dialog$")]
         public static void WhenIEnterInTheFieldOnTheDialog(string fieldValue, string fieldLabel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.SetPortalFieldValue(Driver.FindPortalField(fieldLabel), fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
+                return;
+            }
+
             string fieldName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
 
-            SetFieldValue(fieldName, fieldValue.ReplaceTemplatedText());
+            SetFieldValue(fieldName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
 
             Driver.WaitForTransaction();
         }
@@ -186,6 +284,13 @@
         [Then(@"a dialog with '(.*)' title should be displayed")]
         public static void ThenADialogWithTitleShouldBeDisplayed(string dialogTitle)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.WaitForPortalCondition(() => GetPortalDialogTitle() == dialogTitle, DialogStateTimeout);
+                GetPortalDialogTitle().Should().Be(dialogTitle);
+                return;
+            }
+
             string dialogTitleElement = XrmApp.Dialogs.GetCurrentDialogLable();
 
             dialogTitleElement.Should().Be(dialogTitle);
@@ -207,6 +312,25 @@
         }
 
         /// <summary>
+        /// Asserts that a field on the displayed dialog shows a validation error (e.g. set by a script with setIsValid).
+        /// </summary>
+        /// <param name="fieldLabel">The field label.</param>
+        /// <param name="errorMessage">The expected error message.</param>
+        [Then("the '(.*)' field on the dialog should show the error '(.*)'")]
+        public static void ThenTheFieldOnTheDialogShouldShowTheError(string fieldLabel, string errorMessage)
+        {
+            if (!Driver.IsTalxisPortal())
+            {
+                throw new NotSupportedException("Field validation errors are only checked in the TALXIS Portal.");
+            }
+
+            // The control renders the error inside the field's form cell; scripts validate asynchronously.
+            Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).Text.Contains(errorMessage, StringComparison.Ordinal), DialogStateTimeout)
+                .Should()
+                .BeTrue(because: $"the '{fieldLabel}' field should show the error '{errorMessage}'");
+        }
+
+        /// <summary>
         /// Asserts that a value is shown in a field.
         /// </summary>
         /// <param name="expectedValue">The expected value.</param>
@@ -214,6 +338,14 @@
         [Then("I should be able to see a value of '(.*)' in the '(.*)' field on the dialog")]
         public static void ThenIShouldBeAbleToSeeAValueInTheFieldOnTheDialog(string expectedValue, string fieldLabel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                // Values may be filled in asynchronously (e.g. by onchange handlers).
+                Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).GetPortalFieldValue() == expectedValue, DialogStateTimeout);
+                Driver.FindPortalField(fieldLabel).GetPortalFieldValue().Should().Be(expectedValue);
+                return;
+            }
+
             string fieldLogicalName;
             string actualValue;
 

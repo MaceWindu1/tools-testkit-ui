@@ -1,9 +1,11 @@
 ﻿namespace TALXIS.TestKit.Bindings.Steps
 {
+    using System;
     using System.Linq;
     using FluentAssertions;
     using OpenQA.Selenium;
     using Reqnroll;
+    using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors;
     using TALXIS.TestKit.Selectors.Browser;
 
@@ -13,6 +15,8 @@
     [Binding]
     public class NavigationSteps : PowerAppsStepDefiner
     {
+        private static readonly TimeSpan PortalNavigationTimeout = TimeSpan.FromSeconds(10);
+
         /// <summary>
         /// Opens a sub-area from the navigation bar.
         /// </summary>
@@ -90,6 +94,13 @@
         [Then(@"I should see the '(.*)' subarea")]
         public static void ThenIShouldSeeTheSubArea(string subArea)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.WaitForPortalCondition(() => Driver.FindPortalSiteMapItem(subArea) != null, PortalNavigationTimeout)
+                    .Should().BeTrue(because: $"the '{subArea}' subarea should be shown");
+                return;
+            }
+
             var subAreaElement = XrmApp.Navigation.GetSubAreaElement(subArea);
 
             subAreaElement.Should().NotBeNull("the subarea image should be present");

@@ -1,40 +1,62 @@
 namespace TALXIS.TestKit.Bindings.Steps
 {
+    using System;
     using FluentAssertions;
-    using OpenQA.Selenium;
     using Reqnroll;
+    using TALXIS.TestKit.Bindings.Extensions;
 
     /// <summary>
-    /// Asserts the disabled state (and tooltip) of a TALXIS Portal sitemap item — i.e. one set via
-    /// the portal framework's TALXIS.Portal.App.sitemap.getItem(name).setDisabled(true, message) API.
-    ///
-    /// This is TALXIS Portal's own custom navigation chrome, not the standard Dynamics UCI sitemap
-    /// that NavigationSteps (XrmApp.Navigation.*) targets, so this does a generic text-based lookup
-    /// for the sitemap item and reads its title/aria-disabled attributes directly rather than relying
-    /// on UCI-specific selectors. Verify the selector against a live portal session for your project —
-    /// it was written against one portal's rendered markup and may need adjusting if another project's
-    /// theme/sitemap customization changes the DOM shape.
+    /// Step bindings for the navigation (sitemap) of a TALXIS Portal, whose items scripts can hide or disable with
+    /// TALXIS.Portal.App.sitemap.getItem(name).setVisible(...) / setDisabled(disabled, message). See
+    /// <see cref="PortalPageExtensions"/> for how the portal renders them.
     /// </summary>
     [Binding]
     public class PortalSiteMapSteps : PowerAppsStepDefiner
     {
+        private static readonly TimeSpan NavigationTimeout = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan PageLoadTimeout = TimeSpan.FromSeconds(60);
+
         /// <summary>
-        /// Asserts that a portal sitemap item is disabled with the given tooltip message.
+        /// Asserts that a navigation item is shown but disabled, with the given message as its tooltip.
         /// </summary>
-        /// <param name="subareaLabel">The sitemap item's visible label.</param>
-        /// <param name="expectedMessage">The expected tooltip/title text.</param>
+        /// <param name="subareaLabel">The item's label.</param>
+        /// <param name="expectedMessage">The expected message.</param>
         [Then(@"the '(.*)' subarea should be disabled with the message '(.*)'")]
         public static void ThenTheSubareaShouldBeDisabledWithTheMessage(string subareaLabel, string expectedMessage)
         {
-            // setDisabled(true, message) on a TALXIS.Portal sitemap item is expected to render as a
-            // disabled/greyed-out nav item whose tooltip (title) is the given message.
-            var item = Driver.FindElement(By.XPath($"//*[contains(text(), '{subareaLabel}')]"));
+            Driver.WaitForPortalCondition(
+                () => Driver.FindPortalSiteMapItem(subareaLabel) is { } item && item.IsPortalElementDisabled() && item.GetAttribute("title") == expectedMessage,
+                NavigationTimeout);
 
-            var isDisabled = item.GetAttribute("aria-disabled") == "true"
-                || item.GetAttribute("class")?.Contains("disabled") == true;
-
-            isDisabled.Should().BeTrue(because: $"the '{subareaLabel}' subarea should be disabled");
+            var item = Driver.FindPortalSiteMapItem(subareaLabel);
+            item.Should().NotBeNull(because: $"the '{subareaLabel}' subarea should be shown");
+            item.IsPortalElementDisabled().Should().BeTrue(because: $"the '{subareaLabel}' subarea should be disabled");
             item.GetAttribute("title").Should().Be(expectedMessage);
+        }
+
+        /// <summary>
+        /// Asserts that a navigation item is not shown.
+        /// </summary>
+        /// <param name="subareaLabel">The item's label.</param>
+        [Then(@"I should not see the '(.*)' subarea")]
+        public static void ThenIShouldNotSeeTheSubarea(string subareaLabel)
+        {
+            Driver.BecomesAbsent(() => Driver.FindPortalSiteMapItem(subareaLabel) != null, NavigationTimeout)
+                .Should().BeTrue(because: $"the '{subareaLabel}' subarea should not be shown");
+        }
+
+        /// <summary>
+        /// Opens a page by clicking its navigation item.
+        /// </summary>
+        /// <param name="subareaLabel">The item's label.</param>
+        [When(@"I open the '(.*)' page from the navigation")]
+        public static void WhenIOpenThePageFromTheNavigation(string subareaLabel)
+        {
+            Driver.WaitForPortalCondition(() => Driver.FindPortalSiteMapItem(subareaLabel) is { } item && !item.IsPortalElementDisabled(), NavigationTimeout)
+                .Should().BeTrue(because: $"the '{subareaLabel}' subarea should be shown and enabled");
+
+            Driver.ClickWhenUnblocked(() => Driver.FindPortalSiteMapItem(subareaLabel), NavigationTimeout, $"The '{subareaLabel}' subarea");
+            Driver.WaitForPortalReady(PageLoadTimeout, $"The '{subareaLabel}' page did not finish loading.");
         }
     }
 }

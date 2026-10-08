@@ -22,6 +22,10 @@
     [Binding]
     public class EntitySteps : PowerAppsStepDefiner
     {
+        private static readonly TimeSpan PortalStateTimeout = TimeSpan.FromSeconds(10);
+        // Tabs and fields of a portal page (or of the record selected in its subgrid) can render well after the page loads.
+        private static readonly TimeSpan PortalRenderTimeout = TimeSpan.FromSeconds(30);
+
         /// <summary>
         /// Selects a tab on the form.
         /// </summary>
@@ -29,6 +33,24 @@
         [When(@"I select the '(.*)' tab")]
         public static void ISelectTab(string tabName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                // Tab labels can contain record values (e.g. a number), referenced as parameters.
+                tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
+                Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName) != null, PortalRenderTimeout);
+
+                // The tabs re-render while the page loads, so the tab is looked up again for every check and click.
+                if (!Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName)?.IsPortalTabSelected() == true, TimeSpan.Zero))
+                {
+                    Driver.ClickWhenUnblocked(() => Driver.FindPortalTab(tabName), PortalStateTimeout, $"The '{tabName}' tab");
+                }
+
+                Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName)?.IsPortalTabSelected() == true, PortalStateTimeout)
+                    .Should().BeTrue(because: $"the '{tabName}' tab should be the selected one after clicking it");
+                Driver.CloseMenus();
+                return;
+            }
+
             XrmApp.Entity.SelectTab(tabName);
         }
 
@@ -44,6 +66,19 @@
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tabName, nameof(tabName));
 
             bool shouldBeVisible = shouldOrShouldNot.Equals("should", StringComparison.InvariantCultureIgnoreCase);
+
+            if (Driver.IsTalxisPortal())
+            {
+                tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
+
+                // Tabs are shown or hidden by scripts after the page loads.
+                var visible = shouldBeVisible
+                    ? Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName) != null, PortalRenderTimeout)
+                    : !Driver.BecomesAbsent(() => Driver.FindPortalTab(tabName) != null, PortalStateTimeout);
+                Driver.CloseMenus();
+                visible.Should().Be(shouldBeVisible, because: $"The tab '{tabName}' {(shouldBeVisible ? "should" : "should not")} be visible.");
+                return;
+            }
 
             XrmApp.Entity.IsTabVisible(tabName)
                 .Should()
@@ -71,11 +106,11 @@
 
             if (fieldLocation == "field")
             {
-                SetFieldValue(fieldLogicalName, fieldValue.ReplaceTemplatedText(), fieldType);
+                SetFieldValue(fieldLogicalName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), fieldType);
             }
             else
             {
-                SetHeaderFieldValue(fieldLabel, fieldValue.ReplaceTemplatedText(), fieldType);
+                SetHeaderFieldValue(fieldLabel, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), fieldType);
             }
 
             Client.TryLoseFocus();
@@ -247,6 +282,16 @@
         [Then("I should be able to see a value of '(.*)' in the '(.*)' field")]
         public static void ThenIShouldBeAbleToSeeAValueInTheField(string expectedValue, string fieldLabel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                expectedValue = expectedValue.ReplaceTemplatedText(TestConfig.Parameters);
+
+                // Values may be filled in asynchronously (e.g. a nested form showing the selected record).
+                Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).GetPortalFieldValue() == expectedValue, PortalRenderTimeout);
+                Driver.FindPortalField(fieldLabel).GetPortalFieldValue().Should().Be(expectedValue);
+                return;
+            }
+
             string fieldLogicalName;
             string actualValue;
 
@@ -325,6 +370,16 @@
         [Then(@"the '(.*)' field should be (mandatory|optional)")]
         public static void ThenTheFieldShouldBeMandatory(string fieldLabel, string requirementLevel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                var required = requirementLevel == "mandatory";
+
+                // Form scripts may set the requirement level after the form loads.
+                Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).IsPortalFieldRequired() == required, PortalStateTimeout);
+                Driver.FindPortalField(fieldLabel).IsPortalFieldRequired().Should().Be(required, because: $"the field should be {requirementLevel}");
+                return;
+            }
+
             string fieldName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
 
             XrmApp.Entity.GetFieldSectionItemContainertAttribute<int>(fieldLabel, "data-fieldrequirement")
@@ -474,6 +529,13 @@
         [Then(@"I should not be able to edit the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToEditTheField(string fieldName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldName).IsPortalFieldReadOnly(), PortalStateTimeout);
+                Driver.FindPortalField(fieldName).IsPortalFieldReadOnly().Should().BeTrue(because: "the field should not be editable");
+                return;
+            }
+
             XrmApp.Entity.GetField(fieldName).IsReadOnly(Driver).Should().BeTrue(because: "the field should not be editable");
         }
 
@@ -499,6 +561,13 @@
         [Then(@"I should be able to see the '(.*)' field")]
         public static void ThenIShouldBeAbleToSeeTheField(string fieldName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.WaitForPortalCondition(() => Driver.TryFindPortalField(fieldName)?.Displayed == true, PortalRenderTimeout)
+                    .Should().BeTrue(because: $"the '{fieldName}' field should be visible");
+                return;
+            }
+
             XrmApp.Entity.IsFieldVisible(Driver, fieldName).Should().BeTrue(because: "the field should be visible");
         }
 
@@ -509,6 +578,13 @@
         [Then(@"I should not be able to see the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToSeeTheField(string fieldName)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                Driver.BecomesAbsent(() => Driver.TryFindPortalField(fieldName)?.Displayed == true, PortalStateTimeout)
+                    .Should().BeTrue(because: $"the '{fieldName}' field should not be visible");
+                return;
+            }
+
             XrmApp.Entity.IsFieldVisible(Driver, fieldName).Should().BeFalse(because: "the field should not be visible");
         }
 
@@ -549,6 +625,15 @@
         [Then(@"the active tab should be '(.*)'")]
         public static void ThenTheActiveTabShouldBe(string expectedTabLabel)
         {
+            if (Driver.IsTalxisPortal())
+            {
+                expectedTabLabel = expectedTabLabel.ReplaceTemplatedText(TestConfig.Parameters);
+                Driver.WaitForPortalCondition(() => Driver.FindPortalTab(expectedTabLabel)?.IsPortalTabSelected() == true, PortalStateTimeout)
+                    .Should().BeTrue(because: $"the '{expectedTabLabel}' tab should be the active one");
+                Driver.CloseMenus();
+                return;
+            }
+
             XrmApp.Entity.GetAttributeOfActiveTab("aria-label").Should().Be(expectedTabLabel);
         }
 
