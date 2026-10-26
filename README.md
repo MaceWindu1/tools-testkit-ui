@@ -106,7 +106,8 @@ Alternatively, write your own step bindings (see below).
 #### TALXIS Portal
 
 The navigation, tab, field, subgrid, command and dialog steps also work on a TALXIS Portal (signed in with
-`I am logged in to the portal as '<alias>'`), with what the portal renders:
+`I am logged in to the portal as '<alias>'`, which signs in once more when Azure AD B2C does not return to the portal,
+e.g. after its own error), with what the portal renders:
 
 - Navigation items by their label or subarea id. A disabled item is shown with its message
   (`the '<item>' subarea should be disabled with the message '<message>'`); a hidden item is not rendered.
@@ -117,8 +118,11 @@ The navigation, tab, field, subgrid, command and dialog steps also work on a TAL
   count of 1..1) are rendered on each record's row; the steps look for them on the rows of the selected records (all
   rows when none is selected), other commands on the subgrid's ribbon. The portal does not render a command whose
   rules fail, so a disabled command is one that is not shown. In a subgrid without a selection column, selecting a
-  record clicks a plain cell of its row, or, when that does not select it, makes its row the one the command steps
-  look at.
+  record makes its row the one the command steps look at (in the legacy view it first clicks a plain cell of the row,
+  which selects it; in the grid a click would open the record). To click a command on a record's row without
+  selecting the record, as a user does (a grid can draw a selected row's highlight over its commands), use
+  `I click the '<command>' command on '<alias>' in the '<subgrid>' subgrid`, or, by a displayed value,
+  `I click the '<command>' command on the record with '<value>' in the '<column>' field in the '<subgrid>' subgrid`.
 - A subgrid shown with the legacy view (e.g. in a nested form) has no record ids in the page; its records are found by
   a displayed value. In a grouped legacy view the grouped column's value is shown only in the group header: the steps
   expand the matching group and use its rows, or, when the group cannot be expanded (an aggregated row whose expander
@@ -126,7 +130,11 @@ The navigation, tab, field, subgrid, command and dialog steps also work on a TAL
 - Row buttons of a dataset grid (notification expressions) by their title, aria-label or text, or, for an icon-only
   button that shows its label only in a tooltip, by its Fluent icon name (`'ClipboardList'`).
 - Checks that something is not shown wait until it is gone and stays gone for a few seconds, since scripts hide
-  navigation items and tabs after the page loads and grids refresh after a command.
+  navigation items and tabs after the page loads and grids refresh after a command. Selecting a tab clicks it again
+  while it is not selected (a page can drop a click while it is loading), and closing a dialog waits for a dialog the
+  previous step opened.
+- A failed scenario saves a screenshot, the page's HTML and the browser's console (Chrome) in the `screenshots`
+  folder next to the tests.
 - Values of tab labels, dialog titles and field values can reference parameters (`{{Parameter:Name}}`, see below).
 
 ### Writing step bindings
@@ -221,7 +229,8 @@ In addition to the standard Web API syntax, we also have the following:
 | @extends     | a relative path to a data file to extend. Records in arrays are merged by index (you may need to include blank objects to insert new records into the array) | Optional                                                 |
 
 Dataverse creates every record active. A record with an inactive `statecode` (and its `statuscode`) is created active and
-its state is set once it and its related records exist.
+its state is set once it and its related records exist. When a plugin or process gives an active record another status
+reason as it is created, the record's `statuscode` from the data file is set again.
 
 #### Dynamic data
 
@@ -290,6 +299,15 @@ await Xrm.WebApi.retrieveMultipleRecords("processstage", "?$filter=_processid_va
 ## Contributing
 
 Please refer to the [Contributing](./CONTRIBUTING.md) guide.
+
+The TALXIS Portal extensions (finding navigation items, tabs, fields, subgrid rows and commands, dialogs) have tests in
+`TALXIS.TestKit.Bindings/bindings/tests/TALXIS.TestKit.Bindings.Tests`. They run in a headless Chrome against
+`TestPages/portal.html`, a static copy of the DOM the portal renders; when the portal renders something differently,
+reproduce it on the page first. The driver's data handling has Karma specs in `TALXIS.TestKit.Bindings/driver/test`.
+
+```shell
+dotnet test TALXIS.TestKit.Bindings/bindings/tests/TALXIS.TestKit.Bindings.Tests
+```
 
 ## Licence
 
