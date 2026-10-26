@@ -19,7 +19,7 @@
         /// Clicks the confirmation button on a confirm dialog.
         /// </summary>
         /// <param name="option">The option to click.</param>
-        [When(@"I (confirm|cancel) when presented with the confirmation dialog")]
+        [When(@"^I (confirm|cancel) when presented with the confirmation dialog$")]
         public static void WhenIConfirmWhenPresentedWithTheConfirmationDialog(string option)
         {
             if (Driver.IsTalxisPortal())
@@ -56,7 +56,7 @@
         /// Closes an opportunity.
         /// </summary>
         /// <param name="status">Whether the opportunity was won.</param>
-        [When("I close the opportunity as (won|lost)")]
+        [When("^I close the opportunity as (won|lost)$")]
         public static void WhenICloseTheOpportunityAs(string status)
         {
             XrmApp.Dialogs.CloseOpportunity(status == "won");
@@ -81,7 +81,7 @@
         /// Clicks an option on the publish dialog.
         /// </summary>
         /// <param name="option">The option to click.</param>
-        [When("I click (confirm|cancel) on the publish dialog")]
+        [When("^I click (confirm|cancel) on the publish dialog$")]
         public static void WhenIClickOnThePublishDialog(string option)
         {
             XrmApp.Dialogs.PublishDialog(option == "confirm");
@@ -91,7 +91,7 @@
         /// Clicks an option on the set state dialog.
         /// </summary>
         /// <param name="option">The option to click.</param>
-        [When("I click (ok|cancel) on the set state dialog")]
+        [When("^I click (ok|cancel) on the set state dialog$")]
         public static void WhenIClickOnTheSetStateDialog(string option)
         {
             XrmApp.Dialogs.SetStateDialog(option == "ok");
