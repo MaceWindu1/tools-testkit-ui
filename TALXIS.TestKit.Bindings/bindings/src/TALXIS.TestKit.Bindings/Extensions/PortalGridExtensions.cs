@@ -216,6 +216,19 @@ namespace TALXIS.TestKit.Bindings.Extensions
         }
 
         /// <summary>
+        /// Finds an inline command in the rows of a record, the way a user clicks it on the record's row without selecting
+        /// the record first, looking into the row's overflow menu when needed.
+        /// </summary>
+        /// <param name="driver">The web driver.</param>
+        /// <param name="rows">The rows of the record.</param>
+        /// <param name="command">The label, id or icon file name (e.g. <c>download.svg</c>).</param>
+        /// <returns>The command, or null when it is not displayed.</returns>
+        public static IWebElement FindPortalRowCommand(this IWebDriver driver, IReadOnlyList<IWebElement> rows, string command)
+        {
+            return rows.Select(row => FindCommandInBar(driver, row, command)).FirstOrDefault(found => found != null);
+        }
+
+        /// <summary>
         /// Waits until a command of a subgrid is displayed and enabled (the ribbon re-evaluates its rules asynchronously,
         /// e.g. after the selection changes).
         /// </summary>
@@ -265,10 +278,17 @@ namespace TALXIS.TestKit.Bindings.Extensions
                 && root.FindElements(By.CssSelector($".ms-DetailsRow, {GroupHeaders}, .TALXIS-Portal-View-noData")).Count > 0;
         }
 
-        // Without a selection column a row may still be selected by clicking it: click a plain cell (not a link, button or
-        // command, which would open or change something) and, when that does not select the row, mark it.
+        // Without a selection column a row of the legacy view is still selected by clicking it: click a plain cell (not a
+        // link, button or command, which would open or change something) and, when that does not select the row, mark it.
+        // A row of the grid (ag-grid) cannot be selected without the column, and a click on it opens its record: mark it.
         private static void SelectByRowClickOrMark(IWebDriver driver, IReadOnlyList<IWebElement> rows)
         {
+            if (rows.Any(row => row.GetAttribute("row-id") != null))
+            {
+                MarkAsTargetRows(driver, rows);
+                return;
+            }
+
             var plainCell = rows.SelectMany(row => row.FindElements(By.CssSelector(RowCells)))
                 .FirstOrDefault(cell => cell.Displayed
                     && !(cell.GetAttribute("col-id") ?? cell.GetAttribute("data-automation-key") ?? string.Empty).EndsWith("gridRibbonButtons", StringComparison.Ordinal)

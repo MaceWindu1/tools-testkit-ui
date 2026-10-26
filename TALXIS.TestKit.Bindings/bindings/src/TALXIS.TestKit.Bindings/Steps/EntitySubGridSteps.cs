@@ -49,6 +49,38 @@
         }
 
         /// <summary>
+        /// Clicks an inline command on the row of a previously created test record in a TALXIS Portal subgrid, as a user
+        /// does, without selecting the record first (a grid can draw the highlight of a selected row over its commands).
+        /// </summary>
+        /// <param name="commandName">The label, id or icon file name of the command.</param>
+        /// <param name="alias">The alias of the test record.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [When(@"I click the '(.*)' command on '(.*)' in the '(.*)' subgrid")]
+        public static void WhenIClickTheCommandOnTheRecordInTheSubgrid(string commandName, string alias, string subGridName)
+        {
+            var subGrid = Driver.FindPortalSubGrid(subGridName);
+            var recordId = TestDriver.GetTestRecordReference(alias).Id;
+            ClickPortalRowCommand(commandName, () => subGrid.FindPortalGridRows(recordId), $"'{alias}'");
+        }
+
+        /// <summary>
+        /// Clicks an inline command on the row of the record that shows a value in a column of a TALXIS Portal subgrid,
+        /// without selecting the record first. Use it for records that are not test records and in the legacy view, whose
+        /// rows do not carry the record id.
+        /// </summary>
+        /// <param name="commandName">The label, id or icon file name of the command.</param>
+        /// <param name="fieldValue">The displayed value.</param>
+        /// <param name="fieldName">The column header label or the column's logical name.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [When(@"I click the '(.*)' command on the record with '(.*)' in the '(.*)' field in the '(.*)' subgrid")]
+        public static void WhenIClickTheCommandOnTheRecordWithInTheFieldInTheSubgrid(string commandName, string fieldValue, string fieldName, string subGridName)
+        {
+            fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
+            var subGrid = Driver.FindPortalSubGrid(subGridName);
+            ClickPortalRowCommand(commandName, () => subGrid.FindPortalGridRowsByValue(fieldName, fieldValue), $"the record with '{fieldValue}' in '{fieldName}'");
+        }
+
+        /// <summary>
         /// Selects a previously created test record in a subgrid.
         /// </summary>
         /// <param name="alias">The alias of the test record.</param>
@@ -437,6 +469,14 @@
             {
                 throw new Exception($"Could not find record with field '{fieldName}' with value '{fieldValue}' in the '{subGridName}' subgrid.");
             }
+        }
+
+        private static void ClickPortalRowCommand(string commandName, Func<IReadOnlyList<IWebElement>> findRows, string description)
+        {
+            var available = Driver.WaitForPortalCondition(() => Driver.FindPortalRowCommand(findRows(), commandName) is { } command && !command.IsPortalElementDisabled(), PortalGridTimeout);
+            Driver.CloseMenus();
+            available.Should().BeTrue(because: $"the '{commandName}' command should be available on the row of {description}");
+            Driver.ClickWhenUnblocked(() => Driver.FindPortalRowCommand(findRows(), commandName), PortalGridTimeout, $"The '{commandName}' command on {description}");
         }
 
         private static int? GetSubGridItemIndexByAlias(string recordAlias, string subGridName)
