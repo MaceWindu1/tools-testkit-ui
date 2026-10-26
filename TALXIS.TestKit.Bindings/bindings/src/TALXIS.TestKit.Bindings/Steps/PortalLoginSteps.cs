@@ -1,9 +1,11 @@
 namespace TALXIS.TestKit.Bindings.Steps
 {
     using System;
+    using System.Linq;
     using OpenQA.Selenium;
     using OpenQA.Selenium.Support.UI;
     using Reqnroll;
+    using TALXIS.TestKit.Bindings.Configuration;
     using TALXIS.TestKit.Bindings.Extensions;
 
     /// <summary>
@@ -20,6 +22,7 @@ namespace TALXIS.TestKit.Bindings.Steps
         private const string SignInNameInputId = "signInName";
         private const string PasswordInputId = "password";
         private const string SignInButtonId = "next";
+        private const int SignInAttempts = 2;
         private static readonly TimeSpan LoginTimeout = TimeSpan.FromSeconds(60);
 
         /// <summary>
@@ -36,22 +39,55 @@ namespace TALXIS.TestKit.Bindings.Steps
             }
 
             var portalUrl = TestConfig.GetTestUrl();
-            var wait = new WebDriverWait(Driver, LoginTimeout);
+            for (var attempt = 1; !TrySignIn(user, portalUrl); attempt++)
+            {
+                var shown = PageText();
+                if (attempt == SignInAttempts)
+                {
+                    throw new WebDriverTimeoutException($"Signing in as '{userAlias}' did not redirect back to {portalUrl.Host}. Check the username and password. The page shows: {shown}");
+                }
 
+                // Azure AD B2C sometimes fails a sign-in with its own error (e.g. "ConnectionTimeOut: An exception has occurred.").
+                Console.WriteLine($"Signing in as '{userAlias}' did not redirect back to {portalUrl.Host} (the page shows: {shown}); signing in again.");
+            }
+
+            Driver.WaitForPortalReady(LoginTimeout, "The portal did not finish loading after signing in.");
+        }
+
+        // Signs in on the B2C page the portal redirects to and returns whether the browser came back to the portal.
+        private static bool TrySignIn(UserConfiguration user, Uri portalUrl)
+        {
             Driver.Navigate().GoToUrl(portalUrl);
 
-            // The portal redirects to the B2C sign-in page once its MSAL client has loaded.
-            wait.Message = "The Azure AD B2C sign-in page was not displayed. Is the browser already signed in?";
-            wait.Until(driver => driver.FindElements(By.Id(SignInNameInputId)).Count > 0);
+            // The portal redirects to the B2C sign-in page once its MSAL client has loaded. The page renders its form before
+            // its scripts are ready: typing or clicking before then is refused or does not submit the form.
+            var wait = new WebDriverWait(Driver, LoginTimeout) { Message = "The Azure AD B2C sign-in page was not displayed. Is the browser already signed in?" };
+            wait.Until(driver => IsReady(driver, SignInNameInputId) && IsReady(driver, PasswordInputId) && IsReady(driver, SignInButtonId));
 
             Driver.FindElement(By.Id(SignInNameInputId)).SendKeys(user.Username);
             Driver.FindElement(By.Id(PasswordInputId)).SendKeys(user.Password);
             Driver.FindElement(By.Id(SignInButtonId)).Click();
 
-            wait.Message = $"Signing in as '{userAlias}' did not redirect back to {portalUrl.Host}. Check the username and password.";
-            wait.Until(driver => new Uri(driver.Url).Host == portalUrl.Host);
+            try
+            {
+                new WebDriverWait(Driver, LoginTimeout).Until(driver => new Uri(driver.Url).Host == portalUrl.Host);
+                return true;
+            }
+            catch (WebDriverTimeoutException)
+            {
+                return false;
+            }
+        }
 
-            Driver.WaitForPortalReady(LoginTimeout, "The portal did not finish loading after signing in.");
+        private static string PageText()
+        {
+            var text = Driver.FindElements(By.TagName("body")).FirstOrDefault()?.Text ?? string.Empty;
+            return text.Length > 300 ? text.Substring(0, 300) : text;
+        }
+
+        private static bool IsReady(IWebDriver driver, string elementId)
+        {
+            return driver.FindElements(By.Id(elementId)).FirstOrDefault() is { Displayed: true, Enabled: true };
         }
     }
 }
