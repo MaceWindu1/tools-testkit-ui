@@ -20,6 +20,12 @@ namespace TALXIS.TestKit.Bindings.Extensions
         /// <summary>How long a condition is watched to confirm that something does not appear.</summary>
         public static readonly TimeSpan AbsenceSettleTime = TimeSpan.FromSeconds(3);
 
+        // How long a click on a tab is given to select it before the tab is clicked again.
+        private static readonly TimeSpan TabClickSettleTime = TimeSpan.FromSeconds(3);
+
+        // How long a tab is watched before it is taken as not selected (it can be replaced while it is being read).
+        private static readonly TimeSpan TabStateCheckTime = TimeSpan.FromSeconds(1);
+
         private const string HorizontalSiteMapItems = "[data-id^='sitemap-entity-']";
         private const string VerticalSiteMapItems = ".TALXIS__navigation--vertical .ms-Nav-link";
         private const string TabBars = ".TALXIS__form__tab";
@@ -101,6 +107,36 @@ namespace TALXIS.TestKit.Bindings.Extensions
         public static bool IsPortalTabSelected(this IWebElement tab)
         {
             return tab.GetAttribute("data-selected-top-level") == "true" || tab.GetAttribute("data-selected") == "true";
+        }
+
+        /// <summary>
+        /// Selects a tab, clicking it again while it is not selected: the tabs re-render while the page loads, and a page can
+        /// drop a click on a tab while it is still loading the current one. The tab is looked up again for every check and click.
+        /// </summary>
+        /// <param name="driver">The web driver.</param>
+        /// <param name="labelOrName">The tab label (without its icon) or the tab name.</param>
+        /// <param name="timeout">How long to keep trying.</param>
+        /// <returns>Whether the tab became the selected one.</returns>
+        public static bool SelectPortalTab(this IWebDriver driver, string labelOrName, TimeSpan timeout)
+        {
+            // Checked through WaitForPortalCondition, which looks a tab up again when it was replaced while being read.
+            bool IsSelectedWithin(TimeSpan wait) =>
+                driver.WaitForPortalCondition(() => driver.FindPortalTab(labelOrName)?.IsPortalTabSelected() == true, wait);
+
+            var deadline = DateTime.UtcNow + timeout;
+            while (!IsSelectedWithin(TabStateCheckTime))
+            {
+                var remaining = deadline - DateTime.UtcNow;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    return false;
+                }
+
+                driver.ClickWhenUnblocked(() => driver.FindPortalTab(labelOrName), remaining, $"The '{labelOrName}' tab");
+                IsSelectedWithin(remaining < TabClickSettleTime ? remaining : TabClickSettleTime);
+            }
+
+            return true;
         }
 
         /// <summary>

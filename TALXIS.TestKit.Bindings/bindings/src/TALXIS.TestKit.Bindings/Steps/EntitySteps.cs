@@ -38,14 +38,7 @@
                 // Tab labels can contain record values (e.g. a number), referenced as parameters.
                 tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
                 Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName) != null, PortalRenderTimeout);
-
-                // The tabs re-render while the page loads, so the tab is looked up again for every check and click.
-                if (!Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName)?.IsPortalTabSelected() == true, TimeSpan.Zero))
-                {
-                    Driver.ClickWhenUnblocked(() => Driver.FindPortalTab(tabName), PortalStateTimeout, $"The '{tabName}' tab");
-                }
-
-                Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName)?.IsPortalTabSelected() == true, PortalStateTimeout)
+                Driver.SelectPortalTab(tabName, PortalRenderTimeout)
                     .Should().BeTrue(because: $"the '{tabName}' tab should be the selected one after clicking it");
                 Driver.CloseMenus();
                 return;
