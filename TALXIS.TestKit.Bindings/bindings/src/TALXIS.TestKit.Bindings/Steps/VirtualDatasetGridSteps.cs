@@ -57,7 +57,8 @@ namespace TALXIS.TestKit.Bindings.Steps
         }
 
         /// <summary>
-        /// Asserts that an inline notification-expression button is not visible on a record's row.
+        /// Asserts that an inline notification-expression button is not visible on a record's row, waiting for a button
+        /// that an action removes when it refreshes the grid.
         /// </summary>
         /// <param name="buttonLabel">The button's visible title, aria-label, or text.</param>
         /// <param name="recordAlias">The alias of the test record.</param>
@@ -66,7 +67,7 @@ namespace TALXIS.TestKit.Bindings.Steps
         {
             Driver.WaitForPortalCondition(() => FindRows(recordAlias).Count > 0, GridTimeout)
                 .Should().BeTrue(because: $"'{recordAlias}' should be present in the virtual dataset grid");
-            PortalPageExtensions.StaysAbsent(() => TryFindRowButton(recordAlias, buttonLabel) != null)
+            Driver.BecomesAbsent(() => TryFindRowButton(recordAlias, buttonLabel) != null, GridTimeout)
                 .Should().BeTrue(because: $"the '{buttonLabel}' button should not be visible on '{recordAlias}'");
         }
 
