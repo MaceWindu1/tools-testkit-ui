@@ -7,6 +7,7 @@
     using System.Threading;
     using OpenQA.Selenium;
     using Reqnroll;
+    using TALXIS.TestKit.Bindings.Extensions;
 
     /// <summary>
     /// After scenario hooks.
@@ -49,7 +50,7 @@
         }
 
         /// <summary>
-        /// Takes a screenshot of the browser and saves the page's HTML when a test fails.
+        /// Takes a screenshot of the browser and saves the page's HTML and the browser's console when a test fails.
         /// </summary>
         [AfterScenario(Order = 0)]
         public void ScreenshotFailedScenario()
@@ -88,6 +89,17 @@
             {
                 // Don't throw an unhandled exception if the screenshot can't be captured as this will prevent the WebDriver instance from being cleaned up.
                 Console.WriteLine($"Failed to capture screenshot: {ex.Message}.");
+            }
+
+            try
+            {
+                // An error of a page script (e.g. a form script that failed) shows only in the browser's console.
+                File.WriteAllLines(Path.Combine(screenshotsFolder, $"{fileName}.console.log"), Driver.ReadBrowserConsole());
+            }
+            catch (Exception ex) when (ex is WebDriverException || ex is NotImplementedException)
+            {
+                // Browsers other than Chromium ones do not offer their console.
+                Console.WriteLine($"Failed to read the browser's console: {ex.Message}.");
             }
         }
 

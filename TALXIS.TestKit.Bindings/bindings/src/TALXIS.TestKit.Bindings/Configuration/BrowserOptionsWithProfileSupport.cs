@@ -53,6 +53,9 @@
                 options.AddArgument("--disable-search-engine-choice-screen");
             }
 
+            // Keeps the console's messages, which are saved with the screenshot of a failed scenario.
+            options.SetLoggingPreference(LogType.Browser, LogLevel.All);
+
             this.AddAdditionalCapabilities(options);
 
             return options;
