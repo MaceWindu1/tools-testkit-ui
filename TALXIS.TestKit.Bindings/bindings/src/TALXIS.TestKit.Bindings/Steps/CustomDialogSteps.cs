@@ -19,6 +19,8 @@
     public class CustomDialogSteps : PowerAppsStepDefiner
     {
         private static readonly TimeSpan DialogStateTimeout = TimeSpan.FromSeconds(10);
+        // How long a wizard takes to offer its button again on its next step.
+        private static readonly TimeSpan NextStepTimeout = TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// Click a button on a custom dialog.
@@ -97,8 +99,7 @@
         {
             if (Driver.IsTalxisPortal())
             {
-                var modal = Driver.GetTopmostPortalModal();
-                Driver.ClosePortalDialog();
+                var modal = Driver.ClosePortalDialog();
                 Driver.WaitForPortalCondition(() => IsStale(modal), DialogStateTimeout);
                 return;
             }
@@ -121,9 +122,16 @@
         public static void WhenIClickTheButtonOnTheDisplayedDialogRepeatedlyUntilItIsNoLongerAvailable(string buttonLabel)
         {
             const int maxClicks = 50; // safety cap against an infinite loop if the button never disappears
-            for (int i = 0; i < maxClicks && TryClickButtonOnDisplayedDialog(buttonLabel); i++)
+            var clicks = 0;
+            while (clicks < maxClicks
+                && WaitForDialogButton(buttonLabel, clicks == 0 ? DialogStateTimeout : NextStepTimeout)
+                && TryClickButtonOnDisplayedDialog(buttonLabel))
             {
+                clicks++;
             }
+
+            clicks.Should().BeGreaterThan(0, because: $"the '{buttonLabel}' button should be on the displayed dialog");
+            clicks.Should().BeLessThan(maxClicks, because: $"the '{buttonLabel}' button should stop being offered");
         }
 
         /// <summary>
@@ -144,13 +152,20 @@
                     return;
                 }
 
-                if (!TryClickButtonOnDisplayedDialog(buttonLabel))
+                if (!WaitForDialogButton(buttonLabel, i == 0 ? DialogStateTimeout : NextStepTimeout) || !TryClickButtonOnDisplayedDialog(buttonLabel))
                 {
                     break;
                 }
             }
 
             IsTextVisible(text).Should().BeTrue(because: $"'{text}' should become visible after repeatedly clicking '{buttonLabel}'");
+        }
+
+        // Waits until the portal dialog offers the button: right after it opens (still loading) or after a wizard moved to
+        // its next step. Elsewhere the button is looked up as it is.
+        private static bool WaitForDialogButton(string buttonLabel, TimeSpan timeout)
+        {
+            return !Driver.IsTalxisPortal() || Driver.WaitForPortalCondition(() => Driver.FindPortalDialogButton(buttonLabel) != null, timeout);
         }
 
         private static bool IsTextVisible(string text)

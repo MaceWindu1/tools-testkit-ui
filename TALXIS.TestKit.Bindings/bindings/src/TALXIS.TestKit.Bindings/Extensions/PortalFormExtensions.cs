@@ -13,6 +13,7 @@ namespace TALXIS.TestKit.Bindings.Extensions
         private const string ModalXPath = "//div[@role='dialog' or @role='alertdialog']";
         private const string FormDialogXPath = ModalXPath + "[.//section[contains(@class, 'TALXIS__form')]]";
         private const string SuggestionXPath = "//div[contains(@class, 'TALXIS__tag-picker__suggestions')]//button[@role='option']";
+        private const string CloseButtons = ".ms-Dialog-button--close, .ms-Panel-closeButton";
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
         /// <summary>
@@ -116,15 +117,19 @@ namespace TALXIS.TestKit.Bindings.Extensions
         }
 
         /// <summary>
-        /// Closes the topmost dialog with its close ('x') button, without saving.
+        /// Closes the topmost dialog with its close ('x') button, without saving, waiting for a dialog that the previous
+        /// action opened and that is still loading.
         /// </summary>
         /// <param name="driver">The web driver.</param>
-        public static void ClosePortalDialog(this IWebDriver driver)
+        /// <returns>The closed dialog.</returns>
+        public static IWebElement ClosePortalDialog(this IWebDriver driver)
         {
-            var modal = driver.GetTopmostPortalModal() ?? throw new NoSuchElementException("No dialog is displayed.");
-            var close = modal.FindElements(By.CssSelector(".ms-Dialog-button--close, .ms-Panel-closeButton")).FirstOrDefault()
-                ?? throw new NoSuchElementException("The displayed dialog has no close button.");
-            close.Click();
+            var wait = new WebDriverWait(driver, DefaultTimeout) { Message = "No dialog with a close button is displayed." };
+            wait.IgnoreExceptionTypes(typeof(NoSuchElementException), typeof(StaleElementReferenceException));
+            var modal = wait.Until(d => d.GetTopmostPortalModal() is { } topmost
+                && topmost.FindElements(By.CssSelector(CloseButtons)).Count > 0 ? topmost : null);
+            modal.FindElements(By.CssSelector(CloseButtons)).First().Click();
+            return modal;
         }
 
         /// <summary>
