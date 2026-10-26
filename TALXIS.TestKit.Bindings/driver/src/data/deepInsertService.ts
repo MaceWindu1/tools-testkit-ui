@@ -90,6 +90,10 @@ export default class DeepInsertService {
 
     if (inactiveState) {
       await repo.updateRecord(logicalName, recordToCreateRef.id, inactiveState);
+    } else if (recordToCreate.statuscode !== undefined) {
+      await DeepInsertService.keepStatusReason(
+        repo, logicalName, recordToCreateRef.id, recordToCreate.statuscode as number,
+      );
     }
 
     return {
@@ -120,6 +124,21 @@ export default class DeepInsertService {
     return record.statuscode === undefined
       ? { statecode: record.statecode }
       : { statecode: record.statecode, statuscode: record.statuscode };
+  }
+
+  // Plugins and process flows can give a record they create another status (e.g. a contract starts
+  // as a draft): the status reason the data gives an active record is then set again, as the
+  // record's later updates would set it.
+  private static async keepStatusReason(
+    repo: RecordRepository,
+    logicalName: string,
+    id: string,
+    statuscode: number,
+  ): Promise<void> {
+    const created = await repo.retrieveRecord(logicalName, id, '?$select=statuscode');
+    if (created?.statuscode !== statuscode) {
+      await repo.updateRecord(logicalName, id, { statuscode });
+    }
   }
 
   private static getOneToManyRecords(record: Record)

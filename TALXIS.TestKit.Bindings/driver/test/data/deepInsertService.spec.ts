@@ -43,6 +43,7 @@ describe('DeepInsertService', () => {
     recordRepo = jasmine.createSpyObj<RecordRepository>('RecordRepository',
       [
         'deleteRecord',
+        'retrieveRecord',
         'upsertRecord',
         'updateRecord',
         'associateManyToManyRecords',
@@ -319,10 +320,30 @@ describe('DeepInsertService', () => {
 
     it('creates an active record with its state', async () => {
       recordRepo.upsertRecord.and.resolveTo({ id: '<contact-id>', entityType: 'contact' });
+      recordRepo.retrieveRecord.and.resolveTo({ statuscode: 1 });
 
       await deepInsertService.deepInsert('contact', { lastname: 'Active', statecode: 0, statuscode: 1 }, {});
 
       expect(recordRepo.upsertRecord.calls.first().args[1]).toEqual({ lastname: 'Active', statecode: 0, statuscode: 1 });
+      expect(recordRepo.updateRecord).not.toHaveBeenCalled();
+    });
+
+    it('sets the status reason of an active record again when the server changed it on create', async () => {
+      recordRepo.upsertRecord.and.resolveTo({ id: '<contract-id>', entityType: 'talxis_contract' });
+      recordRepo.retrieveRecord.and.resolveTo({ statuscode: 100000001 });
+
+      await deepInsertService.deepInsert('talxis_contract', { talxis_name: 'Active', statecode: 0, statuscode: 1 }, {});
+
+      expect(recordRepo.retrieveRecord).toHaveBeenCalledOnceWith('talxis_contract', '<contract-id>', '?$select=statuscode');
+      expect(recordRepo.updateRecord).toHaveBeenCalledOnceWith('talxis_contract', '<contract-id>', { statuscode: 1 });
+    });
+
+    it('does not read the status of a record created without a status reason', async () => {
+      recordRepo.upsertRecord.and.resolveTo({ id: '<contact-id>', entityType: 'contact' });
+
+      await deepInsertService.deepInsert('contact', { lastname: 'Default' }, {});
+
+      expect(recordRepo.retrieveRecord).not.toHaveBeenCalled();
       expect(recordRepo.updateRecord).not.toHaveBeenCalled();
     });
 
