@@ -3,6 +3,7 @@ namespace TALXIS.TestKit.Bindings.Steps
     using System;
     using System.IO;
     using System.Linq;
+    using System.Threading;
     using FluentAssertions;
     using Reqnroll;
 
@@ -17,6 +18,8 @@ namespace TALXIS.TestKit.Bindings.Steps
     [Binding]
     public class FileDownloadSteps : PowerAppsStepDefiner
     {
+        private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+
         private static DateTime scenarioStartedAtUtc;
 
         private static string DownloadsDirectory =>
@@ -39,13 +42,18 @@ namespace TALXIS.TestKit.Bindings.Steps
             var deadline = DateTime.UtcNow.AddSeconds(10);
             bool downloaded;
 
-            do
+            while (true)
             {
                 downloaded = Directory.Exists(DownloadsDirectory)
                     && Directory.GetFiles(DownloadsDirectory)
                         .Any(f => File.GetLastWriteTimeUtc(f) >= scenarioStartedAtUtc && !f.EndsWith(".crdownload", StringComparison.OrdinalIgnoreCase));
+                if (downloaded || DateTime.UtcNow >= deadline)
+                {
+                    break;
+                }
+
+                Thread.Sleep(PollInterval);
             }
-            while (!downloaded && DateTime.UtcNow < deadline);
 
             downloaded.Should().BeTrue(because: "a file should have been downloaded to the Downloads folder during this scenario");
         }
