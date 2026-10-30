@@ -42,6 +42,26 @@
     </section>
   </div>
 
+  <!-- An empty lookup showing records by their number: its first suggestions are still those of a shorter search -->
+  <div class="TALXIS__form__cell">
+    <label class="TALXIS__form__cell__label" title="Contract">Contract</label>
+    <div data-id="talxis_contractid.fieldControl_container"><div class="talxis__lookupControl"><input class="ms-BasePicker-input" oninput="suggestContracts(this)"></div></div>
+  </div>
+  <div class="TALXIS__tag-picker__suggestions" id="contract-suggestions"></div>
+  <script>
+    function suggestContracts(input) {
+      var suggestions = document.getElementById('contract-suggestions');
+      var show = function (numbers) {
+        suggestions.innerHTML = numbers.map(function (n) { return '<button role="option">' + n + '</button>'; }).join('');
+        suggestions.querySelectorAll('button').forEach(function (b) {
+          b.onclick = function () { input.parentNode.innerHTML = '<button data-entity="talxis_contract" title="' + b.textContent + '">' + b.textContent + '</button>'; suggestions.innerHTML = ''; };
+        });
+      };
+      show(['C-001', 'C-002']);
+      setTimeout(function () { show(['C-002']); }, 1000);
+    }
+  </script>
+
   <!-- Grid subgrid (section > ribbon + dataSetRoot; ag-grid with a pinned selection column) -->
   <section class="TALXIS__portal__view-page">
     <div class="TALXIS__ribbon">

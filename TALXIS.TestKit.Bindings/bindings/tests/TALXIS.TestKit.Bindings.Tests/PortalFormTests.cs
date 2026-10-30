@@ -71,6 +71,14 @@ namespace TALXIS.TestKit.Bindings.Tests
         }
 
         [TestMethod]
+        public void TakesTheOnlySuggestionOfALookupOnceTheSearchNarrowsItDown()
+        {
+            this.driver.SetPortalFieldValue(this.driver.FindPortalField("Contract"), "Main contract");
+
+            Assert.AreEqual("C-002", this.driver.FindPortalField("Contract").GetPortalFieldValue());
+        }
+
+        [TestMethod]
         public void LooksUpFieldsOnTheDialogWhileOneIsOpen()
         {
             PortalTestPage.Run("showFormDialog()");

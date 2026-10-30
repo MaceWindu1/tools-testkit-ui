@@ -264,12 +264,13 @@ namespace TALXIS.TestKit.Bindings.Extensions
 
             wait.Until(_ => cell.FindElement(By.CssSelector("input.ms-BasePicker-input"))).SendKeys(value);
 
-            // Lookups may display another column than the searched name (e.g. contracts show their internal ID),
-            // so prefer an exact match and otherwise take the first suggestion.
+            // Lookups may display another column than the searched name (e.g. a record number), so prefer a suggestion
+            // showing the value and otherwise take the only suggestion. Several suggestions without the value may still
+            // be those of a shorter search, so wait for the search to narrow them down.
             wait.Until(d =>
             {
                 var options = d.FindElements(By.XPath(SuggestionXPath)).Where(o => o.Displayed && !string.IsNullOrWhiteSpace(o.Text)).ToList();
-                return options.FirstOrDefault(o => o.Text.Contains(value, StringComparison.Ordinal)) ?? options.FirstOrDefault();
+                return options.FirstOrDefault(o => o.Text.Contains(value, StringComparison.Ordinal)) ?? (options.Count == 1 ? options[0] : null);
             }).Click();
 
             wait.Message = $"The lookup did not take the record matching '{value}'.";
