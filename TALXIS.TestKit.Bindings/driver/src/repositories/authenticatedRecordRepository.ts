@@ -78,13 +78,18 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
    * @param logicalName The logical name of the records to retrieve.
    * @param query The query string.
    */
-  public async retrieveMultipleRecords(logicalName: string, query?: string): Promise<any> {
+  public async retrieveMultipleRecords(
+    logicalName: string,
+    query?: string,
+  ): Promise<Xrm.RetrieveMultipleResult> {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(logicalName);
     const res = await fetch(`${this.apiUrl}${entitySet}${query}`, { headers: this.headers });
 
     await AuthenticatedRecordRepository.checkResponseForError(res);
 
-    return res.json();
+    // Answer in the shape of Xrm.WebApi, which the callers expect, rather than the Web API's.
+    const json = await res.json();
+    return { entities: json.value, nextLink: json['@odata.nextLink'] };
   }
 
   /**

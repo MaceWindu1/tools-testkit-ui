@@ -58,13 +58,12 @@ describe('CurrentUserRecordRepository', () => {
   });
 
   describe('retrieveMultipleRecord(entityLogicalName, query)', () => {
-    it('returns the retrieved records', async () => {
-      const expectedResponse: Xrm.RetrieveMultipleResult = { entities: [], nextLink: '' };
-      fetchMock.mock('*', expectedResponse);
+    it('returns the retrieved records in the shape of Xrm.WebApi', async () => {
+      fetchMock.mock('*', { value: [{ accountid: 'account-id' }], '@odata.nextLink': 'next-link' });
 
       const actualResponse = await recordRepo.retrieveMultipleRecords('account', '?');
 
-      expect(actualResponse).toEqual(expectedResponse);
+      expect(actualResponse).toEqual({ entities: [{ accountid: 'account-id' }], nextLink: 'next-link' });
     });
   });
 
@@ -73,11 +72,7 @@ describe('CurrentUserRecordRepository', () => {
 
     it('performs an update when a match is found on @key', async () => {
       const matchedRecordId = '<account-id>';
-      const retrieveResult: Xrm.RetrieveMultipleResult = {
-        entities: [{ accountid: matchedRecordId }],
-        nextLink: '',
-      };
-      fetchMock.mock('*', retrieveResult);
+      fetchMock.mock('*', { value: [{ accountid: matchedRecordId }] });
 
       const result = await recordRepo.upsertRecord(logicalName, recordWithKey);
 
@@ -85,12 +80,8 @@ describe('CurrentUserRecordRepository', () => {
     });
 
     it('performs a create when no match is found on @key', async () => {
-      const retrieveResult: Xrm.RetrieveMultipleResult = {
-        entities: [],
-        nextLink: '',
-      };
       const id = 'account-id';
-      fetchMock.get('*', retrieveResult);
+      fetchMock.get('*', { value: [] });
       fetchMock.post('*', { headers: { 'OData-EntityId': `api/data/v9.1/accounts(${id})` } });
 
       const result = await recordRepo.upsertRecord(logicalName, recordWithKey);
