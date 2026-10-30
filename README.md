@@ -136,6 +136,9 @@ e.g. after its own error), with what the portal renders:
 - A failed scenario saves a screenshot, the page's HTML and the browser's console (Chrome) in the `screenshots`
   folder next to the tests.
 - Values of tab labels, dialog titles and field values can reference parameters (`{{Parameter:Name}}`, see below).
+- What the signed-in user may read: `I should be able to read '<alias>'` and `I should not be able to read '<alias>'`
+  query a test record through the page's `Xrm.WebApi`, to which the portal applies its retrieve filters as it does to
+  every page. A record the query does not return is not readable; a failed query fails both steps.
 
 ### Writing step bindings
 
