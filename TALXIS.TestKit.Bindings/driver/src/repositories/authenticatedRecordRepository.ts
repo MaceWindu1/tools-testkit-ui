@@ -44,7 +44,8 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
     }
 
     if (suppressFlows) {
-      // Test data must not trigger flows that integrate with other systems, where it does not exist.
+      // Test data must not trigger flows that integrate with other systems, where it does not
+      // exist.
       this.headers['MSCRM.SuppressCallbackRegistrationExpanderJob'] = 'true';
     }
   }
@@ -186,7 +187,11 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
     }));
   }
 
-  public async updateRecord(logicalName: string, id: string, record: any): Promise<Xrm.LookupValue> {
+  public async updateRecord(
+    logicalName: string,
+    id: string,
+    record: any,
+  ): Promise<Xrm.LookupValue> {
     const entitySet = await this.metadataRepo.getEntitySetForEntity(logicalName);
     const res = await fetch(`${this.apiUrl}${entitySet}(${id})`,
       {

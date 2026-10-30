@@ -35,8 +35,7 @@ export default class MetadataRepository {
        */
   public async getEntitySetForEntity(logicalName: string): Promise<string> {
     const response = await fetch(
-      this.apiUrl
-            + `${MetadataRepository.EntityMetadataSet}?$filter=LogicalName eq '${logicalName}'&$select=EntitySetName`,
+      `${this.apiUrl}${MetadataRepository.EntityMetadataSet}?$filter=LogicalName eq '${logicalName}'&$select=EntitySetName`,
       { cache: 'force-cache', headers: this.headers },
     );
     const result = await response.json();
@@ -55,8 +54,7 @@ export default class MetadataRepository {
   public async getTargetsForLookupProperty(logicalName: string, navigationProperty: string)
     : Promise<string[] | null> {
     const response = await fetch(
-      this.apiUrl
-            + `${MetadataRepository.EntityMetadataSet}(LogicalName='${logicalName}')/Attributes/Microsoft.Dynamics.CRM.LookupAttributeMetadata?$filter=LogicalName eq '${navigationProperty.toLowerCase()}'&$select=Targets`,
+      `${this.apiUrl}${MetadataRepository.EntityMetadataSet}(LogicalName='${logicalName}')/Attributes/Microsoft.Dynamics.CRM.LookupAttributeMetadata?$filter=LogicalName eq '${navigationProperty.toLowerCase()}'&$select=Targets`,
       { cache: 'force-cache', headers: this.headers },
     );
     const result = await response.json();
@@ -73,8 +71,7 @@ export default class MetadataRepository {
        */
   public async getLookupPropertyForCollectionProperty(navPropName: string): Promise<string> {
     const response = await fetch(
-      this.apiUrl
-            + `${MetadataRepository.OneToNMetadataSet}?$filter=ReferencedEntityNavigationPropertyName eq '${navPropName}'&$select=ReferencingEntityNavigationPropertyName`,
+      `${this.apiUrl}${MetadataRepository.OneToNMetadataSet}?$filter=ReferencedEntityNavigationPropertyName eq '${navPropName}'&$select=ReferencingEntityNavigationPropertyName`,
       { cache: 'force-cache', headers: this.headers },
     );
     const result = await response.json();
@@ -90,8 +87,7 @@ export default class MetadataRepository {
   public async getRelationshipMetadata(relationshipSchemaName: string)
     : Promise<Xrm.Metadata.OneToNRelationshipMetadata | Xrm.Metadata.NToNRelationshipMetadata> {
     const response = await fetch(
-      this.apiUrl
-            + `${MetadataRepository.RelationshipMetadataSet}(SchemaName='${relationshipSchemaName}')`,
+      `${this.apiUrl}${MetadataRepository.RelationshipMetadataSet}(SchemaName='${relationshipSchemaName}')`,
       { cache: 'force-cache', headers: this.headers },
     );
 

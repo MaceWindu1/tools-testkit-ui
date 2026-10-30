@@ -69,7 +69,8 @@ export default class DeepInsertService {
     const collRecordsByNavProp = DeepInsertService.getOneToManyRecords(recordToCreate);
     Object.keys(collRecordsByNavProp).forEach((collNavProp) => delete recordToCreate[collNavProp]);
 
-    // Dataverse creates records active: an inactive state is set once the record and its related records exist.
+    // Dataverse creates records active: an inactive state is set once the record and its related
+    // records exist.
     const inactiveState = DeepInsertService.getInactiveState(recordToCreate);
     if (inactiveState) {
       Object.keys(inactiveState).forEach((attribute) => delete recordToCreate[attribute]);
@@ -115,7 +116,8 @@ export default class DeepInsertService {
       }, {} as { [navigationProperty: string]: Record[] });
   }
 
-  // The state of a record that is not active (statecode other than 0), with its status reason when given.
+  // The state of a record that is not active (statecode other than 0), with its status reason
+  // when given.
   private static getInactiveState(record: Record): Record | undefined {
     if (record.statecode === undefined || record.statecode === 0) {
       return undefined;
