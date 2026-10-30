@@ -65,7 +65,7 @@
 
             var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
 
-            var matches = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
+            var matches = dialog.FindElements(By.XPath(DialogButtonXPath(buttonLabel)));
 
             matches.Should().NotBeEmpty(because: $"the '{buttonLabel}' button should be present on the displayed dialog");
         }
@@ -86,7 +86,7 @@
 
             var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
 
-            var matches = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
+            var matches = dialog.FindElements(By.XPath(DialogButtonXPath(buttonLabel)));
 
             matches.Should().BeEmpty(because: $"the '{buttonLabel}' button should not be present on the displayed dialog");
         }
@@ -173,10 +173,16 @@
             if (Driver.IsTalxisPortal())
             {
                 var modal = Driver.GetTopmostPortalModal();
-                return modal != null && modal.FindElements(By.XPath($".//*[contains(text(), '{text}')]")).Any(e => e.Displayed);
+                return modal != null && modal.FindElements(By.XPath($".//*[contains(text(), {PortalFormExtensions.XPathLiteral(text)})]")).Any(e => e.Displayed);
             }
 
-            return Driver.FindElements(By.XPath($"//*[contains(text(), '{text}')]")).Count > 0;
+            return Driver.FindElements(By.XPath($"//*[contains(text(), {PortalFormExtensions.XPathLiteral(text)})]")).Count > 0;
+        }
+
+        private static string DialogButtonXPath(string buttonLabel)
+        {
+            var label = PortalFormExtensions.XPathLiteral(buttonLabel);
+            return $".//button[@title={label} or @aria-label={label}]";
         }
 
         private static string GetPortalDialogTitle()
@@ -215,10 +221,11 @@
                 return true;
             }
 
-            var dialog = Driver.FindElement(By.XPath("//div[@role='dialog']"));
-            var buttons = dialog.FindElements(By.XPath($".//button[@title='{buttonLabel}' or @aria-label='{buttonLabel}']"));
+            // The last click of a wizard may have closed the dialog.
+            var dialog = Driver.FindElements(By.XPath("//div[@role='dialog']")).FirstOrDefault();
+            var buttons = dialog?.FindElements(By.XPath(DialogButtonXPath(buttonLabel)));
 
-            if (buttons.Count == 0)
+            if (buttons == null || buttons.Count == 0)
             {
                 return false;
             }
