@@ -60,13 +60,15 @@
                 }
 
                 // The test data lives in a Dataverse environment that is not the page's origin (e.g. behind a TALXIS Portal),
-                // so all data operations go through that environment's Web API as the application user.
+                // so all data operations go through that environment's Web API as the application user. Impersonated
+                // data loads get a repository of their own, so that the impersonation does not stick to the other loads.
                 var webApiUrl = $"{dataverseUrl.TrimEnd('/')}/api/data/v9.1/";
                 scriptBuilder.AppendLine(
                     $@"top.metadataRepository = new {LibraryNamespace}.MetadataRepository('{webApiUrl}', '{authToken}');
                        top.recordRepository = new {LibraryNamespace}.AuthenticatedRecordRepository(top.metadataRepository, '{authToken}', undefined, '{webApiUrl}', {suppressFlowsArgument});
+                       top.appUserRecordRepository = new {LibraryNamespace}.AuthenticatedRecordRepository(top.metadataRepository, '{authToken}', undefined, '{webApiUrl}', {suppressFlowsArgument});
                        top.deepInsertService = new {LibraryNamespace}.DeepInsertService(top.metadataRepository, top.recordRepository);
-                       top.dataManager = new {LibraryNamespace}.DataManager(top.recordRepository, top.deepInsertService, [new {LibraryNamespace}.FakerPreprocessor()], top.recordRepository);");
+                       top.dataManager = new {LibraryNamespace}.DataManager(top.recordRepository, top.deepInsertService, [new {LibraryNamespace}.FakerPreprocessor()], top.appUserRecordRepository);");
             }
             else
             {
