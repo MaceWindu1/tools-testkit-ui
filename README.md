@@ -143,7 +143,8 @@ B2C does not return to the portal, e.g. after its own error), with what the port
 - Navigation items by their label or subarea id. A disabled item is shown with its message
   (`the '<item>' subarea should be disabled with the message '<message>'`); a hidden item is not rendered.
 - Tabs by their label without the `#Icon#` prefix, or by their name. Fields by their label or logical name; while a
-  form dialog is open, fields are looked up on the dialog.
+  form dialog is open, fields are looked up on the dialog. `I enter '<value>' into the '<field>' field on the form` (or
+  `on the dialog`) sets text fields, option sets (by the option's label) and lookups; date fields are not supported yet.
 - Subgrids by their control name. A command is found by its label, button id, command id, or, when it only shows an
   icon, by the icon's file name (`'download.svg'`). Commands for one selected record (an enable rule with a selection
   count of 1..1) are rendered on each record's row; the steps look for them on the rows of the selected records (all

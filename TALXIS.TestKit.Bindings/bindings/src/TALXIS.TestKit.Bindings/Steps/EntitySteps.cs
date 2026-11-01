@@ -90,6 +90,12 @@
         [When(@"I enter '(.*)' into the '(.*)' field on the form")]
         public static void WhenIEnterInTheField(string fieldValue, string fieldLabel)
         {
+            if (TargetsPortal)
+            {
+                Driver.SetPortalFieldValue(Driver.FindPortalField(fieldLabel), fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
+                return;
+            }
+
             Driver.WaitForPageToLoad();
 
             string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
