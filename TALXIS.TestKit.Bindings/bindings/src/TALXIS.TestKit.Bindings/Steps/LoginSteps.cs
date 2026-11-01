@@ -47,6 +47,32 @@
             WaitForMainPage(driver);
         }
 
+        /// <summary>
+        /// Logs in to the configured target as a given user: the model-driven app that the test URL opens (by its appid),
+        /// or the TALXIS Portal at the test URL.
+        /// </summary>
+        /// <param name="userAlias">The alias of the user.</param>
+        [Given(@"I am logged in as '(.*)'")]
+        public static void GivenIAmLoggedInAs(string userAlias)
+        {
+            switch (TestConfig.Target)
+            {
+                case TestTarget.Portal:
+                    PortalLoginSteps.GivenIAmLoggedInToThePortalAs(userAlias);
+                    break;
+                case TestTarget.ModelDrivenApp:
+                    if (!TestConfig.GetTestUrl().Query.Contains("appid"))
+                    {
+                        throw new InvalidOperationException("Logging in without naming the app needs the app's appid in the test URL.");
+                    }
+
+                    GivenIAmLoggedInToTheAppAs(appName: null, userAlias);
+                    break;
+                default:
+                    throw new InvalidOperationException("Set the Target (ModelDrivenApp or Portal) in the configuration to log in without naming the app.");
+            }
+        }
+
         private static void Login(IWebDriver driver, Uri url, UserConfiguration user)
         {
             if (!CookieManager.UserLoginCookies.ContainsKey(user.Username))

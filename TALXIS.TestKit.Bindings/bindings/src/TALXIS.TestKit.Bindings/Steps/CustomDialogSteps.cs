@@ -30,7 +30,7 @@
         [When(@"I click the '(.*)' button on the displayed dialog")]
         public static void WhenIClickButtonOnCustomDialog(string buttonLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.ClickPortalDialogButton(buttonLabel);
                 return;
@@ -56,7 +56,7 @@
         [Then(@"I should be able to see the '(.*)' button on the displayed dialog")]
         public static void ThenIShouldBeAbleToSeeTheButtonOnTheDisplayedDialog(string buttonLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.WaitForPortalCondition(() => Driver.FindPortalDialogButton(buttonLabel) != null, DialogStateTimeout)
                     .Should().BeTrue(because: $"the '{buttonLabel}' button should be present on the displayed dialog");
@@ -77,7 +77,7 @@
         [Then(@"I should not be able to see the '(.*)' button on the displayed dialog")]
         public static void ThenIShouldNotBeAbleToSeeTheButtonOnTheDisplayedDialog(string buttonLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 PortalPageExtensions.StaysAbsent(() => Driver.FindPortalDialogButton(buttonLabel) != null)
                     .Should().BeTrue(because: $"the '{buttonLabel}' button should not be present on the displayed dialog");
@@ -97,7 +97,7 @@
         [When(@"I close the displayed dialog without saving")]
         public static void WhenICloseTheDisplayedDialogWithoutSaving()
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 var modal = Driver.ClosePortalDialog();
                 Driver.WaitForPortalCondition(() => IsStale(modal), DialogStateTimeout);
@@ -165,12 +165,12 @@
         // its next step. Elsewhere the button is looked up as it is.
         private static bool WaitForDialogButton(string buttonLabel, TimeSpan timeout)
         {
-            return !Driver.IsTalxisPortal() || Driver.WaitForPortalCondition(() => Driver.FindPortalDialogButton(buttonLabel) != null, timeout);
+            return !TargetsPortal || Driver.WaitForPortalCondition(() => Driver.FindPortalDialogButton(buttonLabel) != null, timeout);
         }
 
         private static bool IsTextVisible(string text)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 var modal = Driver.GetTopmostPortalModal();
                 return modal != null && modal.FindElements(By.XPath($".//*[contains(text(), {PortalFormExtensions.XPathLiteral(text)})]")).Any(e => e.Displayed);
@@ -205,7 +205,7 @@
 
         private static bool TryClickButtonOnDisplayedDialog(string buttonLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 // A wizard re-renders its footer for the next step; wait for that before looking for the button again.
                 var step = Driver.GetTopmostPortalModal()?.FindElements(By.CssSelector(".TALXIS__form__tab-content, .ms-Dialog-content")).FirstOrDefault();
@@ -258,7 +258,7 @@
         [When("^I enter '(.*)' into the '(.*)' field on the dialog$")]
         public static void WhenIEnterInTheFieldOnTheDialog(string fieldValue, string fieldLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.SetPortalFieldValue(Driver.FindPortalField(fieldLabel), fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
                 return;
@@ -306,7 +306,7 @@
         [Then(@"a dialog with '(.*)' title should be displayed")]
         public static void ThenADialogWithTitleShouldBeDisplayed(string dialogTitle)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.WaitForPortalCondition(() => GetPortalDialogTitle() == dialogTitle, DialogStateTimeout);
                 GetPortalDialogTitle().Should().Be(dialogTitle);
@@ -341,7 +341,7 @@
         [Then("the '(.*)' field on the dialog should show the error '(.*)'")]
         public static void ThenTheFieldOnTheDialogShouldShowTheError(string fieldLabel, string errorMessage)
         {
-            if (!Driver.IsTalxisPortal())
+            if (!TargetsPortal)
             {
                 throw new NotSupportedException("Field validation errors are only checked in the TALXIS Portal.");
             }
@@ -360,7 +360,7 @@
         [Then("I should be able to see a value of '(.*)' in the '(.*)' field on the dialog")]
         public static void ThenIShouldBeAbleToSeeAValueInTheFieldOnTheDialog(string expectedValue, string fieldLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 // Values may be filled in asynchronously (e.g. by onchange handlers).
                 Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).GetPortalFieldValue() == expectedValue, DialogStateTimeout);

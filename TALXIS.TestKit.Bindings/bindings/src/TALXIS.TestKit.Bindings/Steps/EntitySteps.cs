@@ -33,7 +33,7 @@
         [When(@"I select the '(.*)' tab")]
         public static void ISelectTab(string tabName)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 // Tab labels can contain record values (e.g. a number), referenced as parameters.
                 tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
@@ -60,7 +60,7 @@
 
             bool shouldBeVisible = shouldOrShouldNot.Equals("should", StringComparison.InvariantCultureIgnoreCase);
 
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
 
@@ -275,7 +275,7 @@
         [Then("I should be able to see a value of '(.*)' in the '(.*)' field")]
         public static void ThenIShouldBeAbleToSeeAValueInTheField(string expectedValue, string fieldLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 expectedValue = expectedValue.ReplaceTemplatedText(TestConfig.Parameters);
 
@@ -363,7 +363,7 @@
         [Then(@"the '(.*)' field should be (mandatory|optional)")]
         public static void ThenTheFieldShouldBeMandatory(string fieldLabel, string requirementLevel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 var required = requirementLevel == "mandatory";
 
@@ -522,7 +522,7 @@
         [Then(@"I should not be able to edit the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToEditTheField(string fieldName)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldName).IsPortalFieldReadOnly(), PortalStateTimeout);
                 Driver.FindPortalField(fieldName).IsPortalFieldReadOnly().Should().BeTrue(because: "the field should not be editable");
@@ -554,7 +554,7 @@
         [Then(@"I should be able to see the '(.*)' field")]
         public static void ThenIShouldBeAbleToSeeTheField(string fieldName)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.WaitForPortalCondition(() => Driver.TryFindPortalField(fieldName)?.Displayed == true, PortalRenderTimeout)
                     .Should().BeTrue(because: $"the '{fieldName}' field should be visible");
@@ -571,7 +571,7 @@
         [Then(@"I should not be able to see the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToSeeTheField(string fieldName)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.BecomesAbsent(() => Driver.TryFindPortalField(fieldName)?.Displayed == true, PortalStateTimeout)
                     .Should().BeTrue(because: $"the '{fieldName}' field should not be visible");
@@ -618,7 +618,7 @@
         [Then(@"the active tab should be '(.*)'")]
         public static void ThenTheActiveTabShouldBe(string expectedTabLabel)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 expectedTabLabel = expectedTabLabel.ReplaceTemplatedText(TestConfig.Parameters);
                 Driver.WaitForPortalCondition(() => Driver.FindPortalTab(expectedTabLabel)?.IsPortalTabSelected() == true, PortalStateTimeout)

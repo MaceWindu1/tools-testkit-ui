@@ -22,7 +22,7 @@
         [When(@"^I (confirm|cancel) when presented with the confirmation dialog$")]
         public static void WhenIConfirmWhenPresentedWithTheConfirmationDialog(string option)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.AnswerPortalMessageDialog(option == "confirm");
                 return;
@@ -68,7 +68,7 @@
         [When("I close the alert dialog")]
         public static void WhenICloseTheAlertDialog()
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.AnswerPortalMessageDialog(confirm: true);
                 return;
@@ -103,7 +103,7 @@
         [Then(@"an alert dialog should be displayed")]
         public static void ThenAlertDialogIsDisplayed()
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 Driver.WaitForPortalCondition(() => Driver.GetPortalAlertDialogTitle() != null, PortalStateTimeout)
                     .Should().BeTrue(because: "an alert dialog should be displayed");
@@ -122,7 +122,7 @@
         [Then(@"an alert dialog with title '(.*)' should be displayed")]
         public static void ThenAlertDialogWithTextIsDisplayed(string expectedTitle)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 // Titles can contain record values (e.g. a number), referenced as parameters.
                 expectedTitle = expectedTitle.ReplaceTemplatedText(TestConfig.Parameters);
@@ -143,7 +143,7 @@
         [Then(@"a confirmation dialog with title '(.*)' should be displayed")]
         public static void ThenAConfirmationDialogWithTitleShouldBeDisplayed(string expectedTitle)
         {
-            if (Driver.IsTalxisPortal())
+            if (TargetsPortal)
             {
                 ThenAlertDialogWithTextIsDisplayed(expectedTitle);
                 return;

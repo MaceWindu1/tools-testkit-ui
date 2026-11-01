@@ -103,11 +103,42 @@ Scenario: User can create a new account
 
 Alternatively, write your own step bindings (see below).
 
+#### One feature file for a model-driven app and a TALXIS Portal
+
+A TALXIS Portal shows the same forms, subgrids and commands as a model-driven app, so a feature file whose steps do not
+name the kind of app can run against either. Set the kind of app at the URL with `target`:
+
+```json
+{
+  "url": "REQNROLL_POWERAPPS_URL",
+  "target": "Portal"
+}
+```
+
+`target` is `ModelDrivenApp` or `Portal`. The navigation, tab, field, subgrid, command, dialog and record access steps
+act on the configured target. Without `target` they tell the two apart by the open page, and
+`I am logged in as '<alias>'` cannot be used.
+
+```gherkin
+Scenario: A customer can read their invoices
+ Given I am logged in as 'a customer'
+ When I open the 'Invoices' page from the navigation
+ Then I should be able to read 'an unpaid invoice'
+```
+
+- `I am logged in as '<alias>'` logs in to the target: the TALXIS Portal at the URL, or the model-driven app that the
+  URL opens (by its `appid`). `I am logged in to the '<app>' app as '<alias>'` and
+  `I am logged in to the portal as '<alias>'` keep logging in to a given kind of app.
+- `I open the '<page>' page from the navigation` opens a navigation item by its label: a portal's navigation item, or a
+  subarea of the app's current area.
+- Steps for what only one kind of app has fail on the other with a `NotSupportedException`, e.g. a disabled navigation
+  item (`the '<item>' subarea should be disabled with the message '<message>'`), which only a portal shows.
+
 #### TALXIS Portal
 
 The navigation, tab, field, subgrid, command and dialog steps also work on a TALXIS Portal (signed in with
-`I am logged in to the portal as '<alias>'`, which signs in once more when Azure AD B2C does not return to the portal,
-e.g. after its own error), with what the portal renders:
+`I am logged in as '<alias>'` or `I am logged in to the portal as '<alias>'`, which signs in once more when Azure AD
+B2C does not return to the portal, e.g. after its own error), with what the portal renders:
 
 - Navigation items by their label or subarea id. A disabled item is shown with its message
   (`the '<item>' subarea should be disabled with the message '<message>'`); a hidden item is not rendered.
@@ -138,7 +169,8 @@ e.g. after its own error), with what the portal renders:
 - Values of tab labels, dialog titles and field values can reference parameters (`{{Parameter:Name}}`, see below).
 - What the signed-in user may read: `I should be able to read '<alias>'` and `I should not be able to read '<alias>'`
   query a test record through the page's `Xrm.WebApi`, to which the portal applies its retrieve filters as it does to
-  every page. A record the query does not return is not readable; a failed query fails both steps.
+  every page (in a model-driven app, the user's security roles apply). A record the query does not return is not
+  readable; a failed query fails both steps.
 
 ### Writing step bindings
 

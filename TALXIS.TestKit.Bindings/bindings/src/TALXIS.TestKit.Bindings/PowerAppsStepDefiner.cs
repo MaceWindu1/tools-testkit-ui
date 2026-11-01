@@ -135,6 +135,14 @@
         protected static IWebDriver Driver => Client.Browser.Driver;
 
         /// <summary>
+        /// Gets a value indicating whether the steps act on a TALXIS Portal rather than a model-driven app: the configured
+        /// target, or else whether the open page is a portal's.
+        /// </summary>
+        protected static bool TargetsPortal => TestConfig.Target.HasValue
+            ? TestConfig.Target == TestTarget.Portal
+            : Driver.IsTalxisPortal();
+
+        /// <summary>
         /// Gets the profile directory for the current scenario.
         /// </summary>
         protected static string CurrentProfileDirectory

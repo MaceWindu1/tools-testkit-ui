@@ -9,7 +9,7 @@ namespace TALXIS.TestKit.Bindings.Tests
     /// Reading a record as the signed-in portal user, through the page's Xrm.WebApi (stubbed on the test page).
     /// </summary>
     [TestClass]
-    public class PortalRecordAccessTests
+    public class RecordAccessTests
     {
         private static readonly Guid Readable = Guid.Parse("11111111-1111-1111-1111-111111111111");
         private static readonly Guid Filtered = Guid.Parse("22222222-2222-2222-2222-222222222222");
@@ -26,8 +26,8 @@ namespace TALXIS.TestKit.Bindings.Tests
                 "Xrm.WebApi.retrieveMultipleRecords = function (entity, options) { window.lastQuery = entity + options;" +
                 " return Promise.resolve({ entities: options.indexOf('" + Readable + "') > 0 ? [{}] : [] }); }");
 
-            Assert.IsTrue(this.driver.ReadPortalRecordAccess("talxis_contract", Readable).Readable);
-            Assert.IsFalse(this.driver.ReadPortalRecordAccess("talxis_contract", Filtered).Readable);
+            Assert.IsTrue(this.driver.ReadRecordAccess("talxis_contract", Readable).Readable);
+            Assert.IsFalse(this.driver.ReadRecordAccess("talxis_contract", Filtered).Readable);
             Assert.AreEqual(
                 $"talxis_contract?$select=talxis_contractid&$filter=talxis_contractid eq {Filtered}",
                 ((IJavaScriptExecutor)this.driver).ExecuteScript("return window.lastQuery"));
@@ -38,7 +38,7 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("Xrm.WebApi.retrieveMultipleRecords = function () { return Promise.reject({ message: 'Forbidden' }); }");
 
-            var access = this.driver.ReadPortalRecordAccess("talxis_contract", Readable);
+            var access = this.driver.ReadRecordAccess("talxis_contract", Readable);
 
             Assert.IsFalse(access.Readable);
             Assert.AreEqual("Forbidden", access.Error);
