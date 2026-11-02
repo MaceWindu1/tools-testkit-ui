@@ -281,10 +281,10 @@
         [Then("I should be able to see a value of '(.*)' in the '(.*)' field")]
         public static void ThenIShouldBeAbleToSeeAValueInTheField(string expectedValue, string fieldLabel)
         {
+            expectedValue = expectedValue.ReplaceTemplatedText(TestConfig.Parameters);
+
             if (TargetsPortal)
             {
-                expectedValue = expectedValue.ReplaceTemplatedText(TestConfig.Parameters);
-
                 // Values may be filled in asynchronously (e.g. a nested form showing the selected record).
                 Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).GetPortalFieldValue() == expectedValue, PortalRenderTimeout);
                 Driver.FindPortalField(fieldLabel).GetPortalFieldValue().Should().Be(expectedValue);

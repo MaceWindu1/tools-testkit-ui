@@ -1,9 +1,11 @@
 ﻿namespace TALXIS.TestKit.Bindings.Transformations
 {
     using System;
+    using System.Globalization;
     using System.Linq;
     using System.Text.RegularExpressions;
     using Reqnroll;
+    using TALXIS.TestKit.Bindings.Extensions;
 
     /// <summary>
     /// General utility transformations.
@@ -31,6 +33,17 @@
         public static int TransformOrdinalNumberToZeroBasedIndex(string expression)
         {
             return Convert.ToInt32(Regex.Match(expression, @"\d+").Value) - 1;
+        }
+
+        /// <summary>
+        /// Transforms a date relative to the day of the run (<c>{{TODAY}}</c>, <c>{{TODAY:+n}}</c> or <c>{{TODAY:-n}}</c>) to the date.
+        /// </summary>
+        /// <param name="expression">The relative date.</param>
+        /// <returns>The date.</returns>
+        [StepArgumentTransformation(@"(\{\{TODAY(?::[+-]?\d+)?\}\})")]
+        public static DateTime? TransformRelativeDate(string expression)
+        {
+            return DateTime.Parse(expression.ReplaceTemplatedText(), CultureInfo.InvariantCulture);
         }
     }
 }

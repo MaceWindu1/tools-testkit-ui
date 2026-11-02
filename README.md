@@ -111,6 +111,8 @@ Alternatively, write your own step bindings (see below).
   in the form's controls, so they also find a hidden field by its label.
 - `the '<field>' field should be empty` reads the form's value in a model-driven app, so it also checks a hidden field,
   e.g. one that a script cleared and hid.
+- Values entered into and expected in fields can be dates relative to the day of the run, as yyyy-MM-dd: `{{TODAY}}`,
+  `{{TODAY:+n}}` or `{{TODAY:-n}}` (n days from today), e.g. `I enter '{{TODAY:-1}}' into the 'Valid From' field on the form`.
 
 #### One feature file for a model-driven app and a TALXIS Portal
 
