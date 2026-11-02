@@ -20,6 +20,12 @@
 			<BindingsTargetsFiles Include="../TALXIS.TestKit.Bindings.MSBuild/bin/$(Configuration)/netstandard2.0/*.*" />
 		</ItemGroup>
 		<Copy SourceFiles="@(BindingsTargetsFiles)" DestinationFolder="bin/lib/TALXIS.TestKit.Bindings.MSBuild" />
+		<!-- The static item below globs the folder when the project loads, before a clean build has copied the task there,
+		     so the package made on build would ship .targets that load a missing assembly (MSB4062). -->
+		<ItemGroup>
+			<Content Remove="bin\lib\TALXIS.TestKit.Bindings.MSBuild\**" />
+			<Content Include="bin\lib\TALXIS.TestKit.Bindings.MSBuild\**" Pack="true" PackagePath="build\TALXIS.TestKit.Bindings.MSBuild" />
+		</ItemGroup>
 	</Target>
 
 	<Target Name="BuildMSBuildProject" BeforeTargets="CopyTargets">
