@@ -88,7 +88,13 @@
         /// <returns>The URL of the test environment.</returns>
         public Uri GetTestUrl()
         {
-            return new Uri(this.Url);
+            // An unset placeholder (e.g. 'REQNROLL_POWERAPPS_URL') would otherwise fail as an invalid URI format.
+            if (!Uri.TryCreate(this.Url, UriKind.Absolute, out Uri url))
+            {
+                throw new InvalidOperationException($"The test URL '{this.Url}' is not an absolute URL. Set 'Url' in appsettings.json, in the user secrets or in the 'Url' environment variable.");
+            }
+
+            return url;
         }
 
         public UserConfiguration GetUser(string userAlias, bool useCurrentUser = true)

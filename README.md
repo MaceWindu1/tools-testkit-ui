@@ -82,7 +82,7 @@ After instalation TALXS.TestKit.Bindings you can configure it in your _appseting
 }
 ```
 
-The URL, usernames, passwords, and application user details will be set from environment variables (if found). Otherwise, the value from the config file will be used. The browserOptions node supports anything in the TALXIS.TestKit.Selectors `BrowserOptions` class.
+The URL, usernames, passwords, and application user details can be overridden by user secrets or environment variables named by their configuration key (e.g. `Url` or `Users__0__Password`); the placeholder values above are not looked up. A URL that is not an absolute URL (e.g. a placeholder left in place) fails the first step that opens it with a message saying so. The browserOptions node supports anything in the TALXIS.TestKit.Selectors `BrowserOptions` class.
 
 Tests will be distributed evenly between the users if multiple users are configured with the same alias. This can be helpful when you run a large number of tests in parallel and encounter errors due to user-level platform API limits.
 
