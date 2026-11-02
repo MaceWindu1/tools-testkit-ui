@@ -111,6 +111,8 @@ Alternatively, write your own step bindings (see below).
   in the form's controls, so they also find a hidden field by its label.
 - `the '<field>' field should be empty` reads the form's value in a model-driven app, so it also checks a hidden field,
   e.g. one that a script cleared and hid.
+- A multi-select option set takes the labels of its options separated by commas:
+  `I enter 'Email, Phone' into the 'Preferred channels' field on the form`.
 - Values entered into and expected in fields can be dates relative to the day of the run, as yyyy-MM-dd: `{{TODAY}}`,
   `{{TODAY:+n}}` or `{{TODAY:-n}}` (n days from today), e.g. `I enter '{{TODAY:-1}}' into the 'Valid From' field on the form`.
 
@@ -296,7 +298,7 @@ We support [faker.js](https://github.com/marak/Faker.js) moustache template synt
 }
 ```
 
-When using faker syntax, you must also annotate number or date fields using `@faker.number`, `@faker.date` or `@faker.dateonly` to ensure that the JSON is formatted correctly.
+When using faker syntax, you must also annotate number or date fields using `@faker.number`, `@faker.date` or `@faker.dateonly` to ensure that the JSON is formatted correctly. Text fields need no annotation, e.g. `"name": "Tower {{datatype.uuid}}"` gives each run a record with its own name.
 
 You can also dynamically set lookups by alias using `<lookup>@alias.bind` (this is limited to aliased records in other files – not the current file).
 
