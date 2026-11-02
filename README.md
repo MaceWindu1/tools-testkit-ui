@@ -103,6 +103,15 @@ Scenario: User can create a new account
 
 Alternatively, write your own step bindings (see below).
 
+#### Fields
+
+- The field steps of a form take the field's label. The visibility and edit steps
+  (`I should (not) be able to see the '<field>' field`, `I should (not) be able to edit the '<field>' field`) and
+  `the '<field>' field should be empty` take its label or its logical name; in a model-driven app they look the label up
+  in the form's controls, so they also find a hidden field by its label.
+- `the '<field>' field should be empty` reads the form's value in a model-driven app, so it also checks a hidden field,
+  e.g. one that a script cleared and hid.
+
 #### One feature file for a model-driven app and a TALXIS Portal
 
 A TALXIS Portal shows the same forms, subgrids and commands as a model-driven app, so a feature file whose steps do not

@@ -476,11 +476,11 @@
         /// <summary>
         /// Asserts that a field is editable on the form.
         /// </summary>
-        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="fieldName">The label or logical name of the field.</param>
         [Then(@"I should be able to edit the '(.*)' field")]
         public static void ThenIShouldBeAbleToEditTheField(string fieldName)
         {
-            var field = XrmApp.Entity.GetField(fieldName);
+            var field = XrmApp.Entity.GetField(XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName));
 
             field.IsVisible.Should().BeTrue(because: "the field must be visible to be editable");
             field.IsReadOnly(Driver).Should().BeFalse(because: "the field should be editable");
@@ -524,7 +524,7 @@
         /// <summary>
         /// Asserts that a field is read-only.
         /// </summary>
-        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="fieldName">The label or logical name of the field.</param>
         [Then(@"I should not be able to edit the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToEditTheField(string fieldName)
         {
@@ -535,7 +535,7 @@
                 return;
             }
 
-            XrmApp.Entity.GetField(fieldName).IsReadOnly(Driver).Should().BeTrue(because: "the field should not be editable");
+            XrmApp.Entity.GetField(XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName)).IsReadOnly(Driver).Should().BeTrue(because: "the field should not be editable");
         }
 
         /// <summary>
@@ -554,9 +554,9 @@
         }
 
         /// <summary>
-        /// Asserts that a field is not visible.
+        /// Asserts that a field is visible.
         /// </summary>
-        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="fieldName">The label or logical name of the field.</param>
         [Then(@"I should be able to see the '(.*)' field")]
         public static void ThenIShouldBeAbleToSeeTheField(string fieldName)
         {
@@ -567,13 +567,13 @@
                 return;
             }
 
-            XrmApp.Entity.IsFieldVisible(Driver, fieldName).Should().BeTrue(because: "the field should be visible");
+            XrmApp.Entity.IsFieldVisible(Driver, XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName)).Should().BeTrue(because: "the field should be visible");
         }
 
         /// <summary>
         /// Asserts that a field is not visible.
         /// </summary>
-        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="fieldName">The label or logical name of the field.</param>
         [Then(@"I should not be able to see the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToSeeTheField(string fieldName)
         {
@@ -584,7 +584,25 @@
                 return;
             }
 
-            XrmApp.Entity.IsFieldVisible(Driver, fieldName).Should().BeFalse(because: "the field should not be visible");
+            XrmApp.Entity.IsFieldVisible(Driver, XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName)).Should().BeFalse(because: "the field should not be visible");
+        }
+
+        /// <summary>
+        /// Asserts that a field has no value. In a model-driven app it reads the form's value, so the field may be hidden.
+        /// </summary>
+        /// <param name="field">The label or logical name of the field.</param>
+        [Then(@"the '(.*)' field should be empty")]
+        public static void ThenTheFieldShouldBeEmpty(string field)
+        {
+            if (TargetsPortal)
+            {
+                Driver.WaitForPortalCondition(() => Driver.FindPortalField(field).GetPortalFieldValue().Length == 0, PortalStateTimeout);
+                Driver.FindPortalField(field).GetPortalFieldValue().Should().BeEmpty(because: $"the '{field}' field should be empty");
+                return;
+            }
+
+            XrmApp.Entity.IsFieldEmpty(Driver, XrmApp.Entity.ResolveFieldLogicalName(Driver, field))
+                .Should().BeTrue(because: $"the '{field}' field should be empty");
         }
 
         /// <summary>

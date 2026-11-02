@@ -45,12 +45,13 @@ namespace TALXIS.TestKit.Bindings.Tests
         public static void StopBrowser() => driver?.Quit();
 
         /// <summary>
-        /// Opens the test page.
+        /// Opens a test page, by default the portal test page.
         /// </summary>
+        /// <param name="page">The file name of the page in TestPages.</param>
         /// <returns>The browser.</returns>
-        public static IWebDriver Open()
+        public static IWebDriver Open(string page = "portal.html")
         {
-            Driver.Navigate().GoToUrl(new Uri(Path.Combine(AppContext.BaseDirectory, "TestPages", "portal.html")).AbsoluteUri);
+            Driver.Navigate().GoToUrl(new Uri(Path.Combine(AppContext.BaseDirectory, "TestPages", page)).AbsoluteUri);
             return Driver;
         }
 

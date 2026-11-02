@@ -31,6 +31,8 @@ namespace TALXIS.TestKit.Bindings.Tests
         [DataRow("When", "I open the 'Invoices' page from the navigation", "WhenIOpenThePageFromTheNavigation")]
         [DataRow("Then", "I should not see the 'Invoices' subarea", "ThenIShouldNotSeeTheSubarea")]
         [DataRow("Then", "I should be able to read 'an invoice'", "ThenIShouldBeAbleToRead")]
+        [DataRow("Then", "the 'Note' field should be empty", "ThenTheFieldShouldBeEmpty")]
+        [DataRow("Then", "the 'Note' field should be mandatory", "ThenTheFieldShouldBeMandatory")]
         public void MatchesOneBinding(string keyword, string text, string expectedMethod)
         {
             var matches = RegexBindings(keyword).Where(binding => binding.regex.IsMatch(text)).Select(binding => binding.method).ToList();
