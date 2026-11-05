@@ -615,6 +615,12 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             }).Value;
         }
 
+        internal bool IsSubAreaVisible(string subArea)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions("Is SubArea Visible"), driver =>
+                driver.FindElements(By.XPath(AppElements.Xpath[AppReference.Navigation.SubAreaImage].Replace("[LABEL]", subArea.ToXPathLiteral()))).Count > 0);
+        }
+
         internal string GetGroupText(string groupName)
         {
             return Client.Execute<string>(Client.GetOptions("Get Group Text"), driver =>

@@ -61,6 +61,16 @@ namespace TALXIS.TestKit.Selectors
             return _entityManager.TryToFindAssertSubgridCommand(commandName, subGridName);
         }
 
+        /// <summary>
+        /// Gets a value indicating whether a command of a subgrid is enabled: some commands stay shown, greyed out, when
+        /// their enable rule fails rather than being removed by a display rule.
+        /// </summary>
+        /// <returns>Whether the command is enabled, or null when it is not shown.</returns>
+        public bool? IsCommandEnabled(string subGridName, string commandName)
+        {
+            return _entityManager.IsSubgridCommandEnabled(commandName, subGridName);
+        }
+
         public void GetFlyoutContainer()
         {
             _entityManager.GetFlyoutContainer();

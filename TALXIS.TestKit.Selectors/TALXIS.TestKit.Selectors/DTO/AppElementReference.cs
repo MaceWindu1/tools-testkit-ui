@@ -18,6 +18,7 @@ namespace TALXIS.TestKit.Selectors
             public static string AreaMenu = "Nav_AreaMenu";
             public static string AreaMoreMenu = "Nav_AreaMoreMenu";
             public static string SubAreaContainer = "Nav_SubAreaContainer";
+            public static string SubAreaImage = "Nav_SubAreaImage";
             public static string WebAppMenuButton = "Nav_WebAppMenuButton";
             public static string UCIAppMenuButton = "Nav_UCIAppMenuButton";
             public static string SiteMapLauncherButton = "Nav_SiteMapLauncherButton";
@@ -298,6 +299,10 @@ namespace TALXIS.TestKit.Selectors
             public static string SwitchProcessDialogOK = "Entity_SwitchProcessDialogOK";
             public static string ActiveProcessGridControlContainer = "Entity_ActiveProcessGridControlContainer";
             public static string DialogContext = "Dialog_DialogContext";
+            public static string Displayed = "Dialog_Displayed";
+            public static string ButtonByLabel = "Dialog_ButtonByLabel";
+            public static string CloseButton = "Dialog_CloseButton";
+            public static string TextOnPage = "Dialog_TextOnPage";
             public static string SwitchProcessContainer = "Dialog_SwitchProcessContainer";
         }
 
@@ -398,6 +403,7 @@ namespace TALXIS.TestKit.Selectors
             { "Nav_AreaMenu"       , "//*[@data-lp-id='sitemap-area-switcher-flyout']"},
             { "Nav_AreaMoreMenu"       , "//ul[@role=\"menubar\"]"},
             { "Nav_SubAreaContainer"       , "//*[@data-id=\"navbar-container\"]/div/ul"},
+            { "Nav_SubAreaImage"           , "//img[@title=[LABEL]]"},
             { "Nav_WebAppMenuButton"       , "//*[@id=\"TabArrowDivider\"]/a"},
             { "Nav_UCIAppMenuButton"       , "//a[@data-id=\"appBreadCrumb\"]"},
             { "Nav_SiteMapLauncherButton", "//button[@data-lp-id=\"sitemap-launcher\"]" },
@@ -505,14 +511,12 @@ namespace TALXIS.TestKit.Selectors
             { "Entity_SubGrid_Row"           , "//div[@data-id='[NAME]-pcf_grid_control_container']//div[@data-id='grid-container']//div[@data-list-index=\'[INDEX]\']"},
             { "Entity_SubGrid_LastRow"           , "//div[@ref='centerContainer']//div[@role='rowgroup']//div[contains(@class, 'ag-row-last')]"},
             { "Entity_SubGridTitle", "//div[contains(text(), '[NAME]')]" },
-            // TALXIS Portal renders the subgrid root with data-id instead of id.
-            { "Entity_SubGridContents", "//div[@id=\"dataSetRoot_[NAME]\" or @data-id=\"dataSetRoot_[NAME]\"]" },
+            { "Entity_SubGridContents", "//div[@id=\"dataSetRoot_[NAME]\"]" },
             { "Entity_SubGridList", "//div[@data-id='[NAME]-pcf_grid_control_container']//div[@data-id='grid-container']//div[@data-automationid='ListCell']" },
             { "Entity_SubGridListCells", ".//div[@class='ag-center-cols-viewport']//div[@role='rowgroup']//div[@row-index]" },
             { "Entity_SubGridViewPickerButton", ".//span[contains(@id, 'ViewSelector') and contains(@id, 'button')]" },
             { "Entity_SubGridViewPickerFlyout", "//div[contains(@id, 'ViewSelector') and contains(@flyoutroot, 'flyoutRootNode')]" },
-            // TALXIS Portal renders the subgrid's ribbon (a Fluent CommandBar) before the subgrid root, not inside it.
-            { "Entity_SubGridCommandBar", ".//ul[contains(@data-id, 'CommandBar')] | ./ancestor::section[contains(@class, 'TALXIS__portal__view-page')][1]//div[contains(@class, 'TALXIS__ribbon')]//div[contains(@class, 'ms-CommandBar')]" },
+            { "Entity_SubGridCommandBar", ".//ul[contains(@data-id, 'CommandBar')]" },
             { "Entity_SubGridCommandLabel", ".//button//span[text()=\"[NAME]\"]" },
             { "Entity_SubGridOverflowContainer", ".//div[contains(@data-id, 'flyoutRootNode')]" },
             { "Entity_SubGridCommandOverflowButton", ".//button[contains(@data-id, 'OverflowButton')]" },
@@ -659,6 +663,10 @@ namespace TALXIS.TestKit.Selectors
             { "CloseActivityDialog_CloseButton" , ".//button[contains(@data-id, 'ok_id')]" },
             { "CloseActivityDialog_CancelButton" , ".//button[contains(@data-id, 'cancel_id')]" },
             { "Dialog_DialogContext", "//div[contains(@role, 'dialog')]" },
+            { "Dialog_Displayed", "//div[@role='dialog']" },
+            { "Dialog_ButtonByLabel", ".//button[@title=[LABEL] or @aria-label=[LABEL]]" },
+            { "Dialog_CloseButton", ".//button[@aria-label='Close' or @title='Close']" },
+            { "Dialog_TextOnPage", "//*[contains(text(), [LABEL])]" },
             { "Dialog_ActualRevenue", "//input[contains(@data-id,'actualrevenue_id')]" },
             { "Dialog_CloseDate", "//input[contains(@data-id,'closedate_id')]" },
             { "Dialog_DescriptionId", "//input[contains(@data-id,'description_id')]" },

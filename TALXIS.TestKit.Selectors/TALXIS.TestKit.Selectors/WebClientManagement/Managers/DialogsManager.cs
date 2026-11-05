@@ -221,9 +221,49 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
         {
             return Client.Execute<bool>(Client.GetOptions("Check If Dialog Is Visible"), driver =>
             {
-                // Blocking dialogs (e.g. TALXIS Portal form dialogs, Fluent UI isBlocking) use the alertdialog role.
-                return driver.IsVisible(By.CssSelector("div[role='dialog'], div[role='alertdialog']"));
+                return driver.IsVisible(By.CssSelector($"div[role='dialog']"));
             });
+        }
+
+        internal bool IsButtonVisible(string label)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions($"Is Dialog Button Visible: {label}"), driver =>
+            {
+                var dialog = driver.FindElement(DialogsElementsLocators.Displayed);
+                return dialog.FindElements(DialogsElementsLocators.ButtonByLabel(label)).Count > 0;
+            });
+        }
+
+        internal bool TryClickButton(string label)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions($"Try Click Dialog Button: {label}"), driver =>
+            {
+                // The last click of a wizard may have closed the dialog.
+                var dialog = driver.FindElements(DialogsElementsLocators.Displayed).FirstOrDefault();
+                var button = dialog?.FindElements(DialogsElementsLocators.ButtonByLabel(label)).FirstOrDefault();
+                if (button == null)
+                    return false;
+
+                button.Click();
+                driver.WaitForTransaction();
+                return true;
+            });
+        }
+
+        internal bool CloseDialog()
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions("Close Dialog"), driver =>
+            {
+                driver.FindElement(DialogsElementsLocators.Displayed).FindElement(DialogsElementsLocators.CloseButton).Click();
+                driver.WaitForTransaction();
+                return true;
+            });
+        }
+
+        internal bool IsTextVisible(string text)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions("Is Text Visible"), driver =>
+                driver.FindElements(DialogsElementsLocators.TextOnPage(text)).Count > 0);
         }
 
         internal string GetCurrentDialogLable()

@@ -1938,6 +1938,15 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             return result.Value;
         }
 
+        internal bool? IsSubgridCommandEnabled(string commandName, string subGridName)
+        {
+            var command = TryToFindAssertSubgridCommand(commandName, subGridName);
+            if (command == null)
+                return null;
+
+            return command.GetAttribute("aria-disabled") != "true" && string.IsNullOrEmpty(command.GetAttribute("disabled"));
+        }
+
         /// <summary>
         /// Gets the flyout container element.
         /// </summary>
