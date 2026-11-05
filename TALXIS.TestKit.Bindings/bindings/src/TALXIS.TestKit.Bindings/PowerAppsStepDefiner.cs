@@ -40,6 +40,12 @@
         [ThreadStatic]
         private static XrmApp xrmApp;
 
+        [ThreadStatic]
+        private static PortalApp portalApp;
+
+        [ThreadStatic]
+        private static IAppUnderTest appUnderTest;
+
         private static IDictionary<string, string> userProfilesDirectories;
         private static object userProfilesDirectoriesLock = new object();
 
@@ -135,12 +141,17 @@
         protected static IWebDriver Driver => Client.Browser.Driver;
 
         /// <summary>
-        /// Gets a value indicating whether the steps act on a TALXIS Portal rather than a model-driven app: the configured
-        /// target, or else whether the open page is a portal's.
+        /// Gets the TALXIS Portal, for steps that act on a portal only.
         /// </summary>
-        protected static bool TargetsPortal => TestConfig.Target.HasValue
-            ? TestConfig.Target == TestTarget.Portal
-            : Driver.IsTalxisPortal();
+        protected static PortalApp PortalApp => portalApp ?? (portalApp = new PortalApp(Client));
+
+        /// <summary>
+        /// Gets the app the steps act on, as the configured <see cref="TestConfiguration.Target"/> says: a model-driven app
+        /// or a TALXIS Portal. Steps that act on either kind of app use only this.
+        /// </summary>
+        protected static IAppUnderTest App => appUnderTest ?? (appUnderTest = TestConfig.Target == TestTarget.Portal
+            ? PortalApp
+            : new ModelDrivenApp());
 
         /// <summary>
         /// Gets the profile directory for the current scenario.
@@ -243,6 +254,8 @@
                 });
 
             xrmApp = null;
+            portalApp = null;
+            appUnderTest = null;
             client = null;
             testDriver = null;
             testConfig?.Flush();

@@ -128,9 +128,8 @@ name the kind of app can run against either. Set the kind of app at the URL with
 }
 ```
 
-`target` is `ModelDrivenApp` or `Portal`. The navigation, tab, field, subgrid, command, dialog and record access steps
-act on the configured target. Without `target` they tell the two apart by the open page, and
-`I am logged in as '<alias>'` cannot be used.
+`target` is `ModelDrivenApp` (the default, so projects without it keep working) or `Portal`. The login, navigation,
+tab, field, subgrid, command, dialog and record access steps act on the configured target.
 
 ```gherkin
 Scenario: A customer can read their invoices
@@ -144,8 +143,9 @@ Scenario: A customer can read their invoices
   `I am logged in to the portal as '<alias>'` keep logging in to a given kind of app.
 - `I open the '<page>' page from the navigation` opens a navigation item by its label: a portal's navigation item, or a
   subarea of the app's current area.
-- Steps for what only one kind of app has fail on the other with a `NotSupportedException`, e.g. a disabled navigation
-  item (`the '<item>' subarea should be disabled with the message '<message>'`), which only a portal shows.
+- Steps for what only one kind of app has fail on the other with a `NotSupportedException` naming the operation, e.g. a
+  disabled navigation item (`the '<item>' subarea should be disabled with the message '<message>'`), which only a portal
+  shows.
 
 #### TALXIS Portal
 
@@ -174,6 +174,8 @@ B2C does not return to the portal, e.g. after its own error), with what the port
   the page hides), the header, which then shows the commands.
 - Row buttons of a dataset grid (notification expressions) by their title, aria-label or text, or, for an icon-only
   button that shows its label only in a tooltip, by its Fluent icon name (`'ClipboardList'`).
+- The portal is ready once it has loaded its navigation bar and the page (`TALXIS.Portal.Context`), or when a dialog
+  shown while it loads waits for input; a portal error dialog fails the step at once.
 - Checks that something is not shown wait until it is gone and stays gone for a few seconds, since scripts hide
   navigation items and tabs after the page loads and grids refresh after a command. Selecting a tab clicks it again
   while it is not selected (a page can drop a click while it is loading), and closing a dialog waits for a dialog the
@@ -200,6 +202,21 @@ public class MyCustomSteps : PowerAppsStepDefiner
       // Interact with the inherited EasyRepro 'Browser' object.
       // Interact with the inherited Selenium 'Driver' object.
     }
+}
+```
+
+A step that should work on a model-driven app and on a TALXIS Portal alike uses the `App` property instead: an
+`IAppUnderTest` (TALXIS.TestKit.Selectors) for the configured target, with the operations a user performs (log in, open
+a page, select a tab, set a field, click a subgrid command, answer a dialog) rather than the markup. For a model-driven
+app it acts through `XrmApp`, for a TALXIS Portal through `PortalApp`, the portal's counterpart of `XrmApp` in
+TALXIS.TestKit.Selectors, which keeps the portal's selectors (`PortalElements`) apart from the model-driven app's
+(`AppElements`). An operation the target does not have throws `NotSupportedException`.
+
+```csharp
+[Then(@"the '(.*)' field should be (mandatory|optional)")]
+public static void ThenTheFieldShouldBeMandatory(string field, string requirementLevel)
+{
+    App.Entity.IsFieldRequired(field, requirementLevel == "mandatory").Should().BeTrue();
 }
 ```
 

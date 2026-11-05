@@ -1,8 +1,6 @@
 ﻿namespace TALXIS.TestKit.Bindings.Steps
 {
-    using System;
     using FluentAssertions;
-    using OpenQA.Selenium;
     using Reqnroll;
     using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors;
@@ -13,8 +11,6 @@
     [Binding]
     public class DialogSteps : PowerAppsStepDefiner
     {
-        private static readonly TimeSpan PortalStateTimeout = TimeSpan.FromSeconds(10);
-
         /// <summary>
         /// Clicks the confirmation button on a confirm dialog.
         /// </summary>
@@ -22,14 +18,7 @@
         [When(@"^I (confirm|cancel) when presented with the confirmation dialog$")]
         public static void WhenIConfirmWhenPresentedWithTheConfirmationDialog(string option)
         {
-            if (TargetsPortal)
-            {
-                Driver.AnswerPortalMessageDialog(option == "confirm");
-                return;
-            }
-
-            XrmApp.Dialogs.ConfirmationDialog(option == "confirm");
-            XrmApp.ThinkTime(2000);
+            App.Dialogs.AnswerConfirmation(option == "confirm");
         }
 
         /// <summary>
@@ -68,13 +57,7 @@
         [When("I close the alert dialog")]
         public static void WhenICloseTheAlertDialog()
         {
-            if (TargetsPortal)
-            {
-                Driver.AnswerPortalMessageDialog(confirm: true);
-                return;
-            }
-
-            XrmApp.Dialogs.CloseWarningDialog();
+            App.Dialogs.CloseAlert();
         }
 
         /// <summary>
@@ -103,16 +86,7 @@
         [Then(@"an alert dialog should be displayed")]
         public static void ThenAlertDialogIsDisplayed()
         {
-            if (TargetsPortal)
-            {
-                Driver.WaitForPortalCondition(() => Driver.GetPortalAlertDialogTitle() != null, PortalStateTimeout)
-                    .Should().BeTrue(because: "an alert dialog should be displayed");
-                return;
-            }
-
-            var dialog = XrmApp.Dialogs.GetAlertDialog();
-
-            dialog.Should().NotBeNull();
+            App.Dialogs.IsAlertShown().Should().BeTrue(because: "an alert dialog should be displayed");
         }
 
         /// <summary>
@@ -122,18 +96,10 @@
         [Then(@"an alert dialog with title '(.*)' should be displayed")]
         public static void ThenAlertDialogWithTextIsDisplayed(string expectedTitle)
         {
-            if (TargetsPortal)
-            {
-                // Titles can contain record values (e.g. a number), referenced as parameters.
-                expectedTitle = expectedTitle.ReplaceTemplatedText(TestConfig.Parameters);
-                Driver.WaitForPortalCondition(() => Driver.GetPortalAlertDialogTitle() == expectedTitle, PortalStateTimeout);
-                Driver.GetPortalAlertDialogTitle().Should().Be(expectedTitle);
-                return;
-            }
-
-            var dialogText = XrmApp.Dialogs.GetAlertDialogMessageText();
-
-            dialogText.Should().Be(expectedTitle);
+            // Titles can contain record values (e.g. a number), referenced as parameters.
+            expectedTitle = expectedTitle.ReplaceTemplatedText(TestConfig.Parameters);
+            App.Dialogs.HasAlertTitle(expectedTitle, out var actual);
+            actual.Should().Be(expectedTitle);
         }
 
         /// <summary>
@@ -143,15 +109,9 @@
         [Then(@"a confirmation dialog with title '(.*)' should be displayed")]
         public static void ThenAConfirmationDialogWithTitleShouldBeDisplayed(string expectedTitle)
         {
-            if (TargetsPortal)
-            {
-                ThenAlertDialogWithTextIsDisplayed(expectedTitle);
-                return;
-            }
-
-            XrmApp.Dialogs.IsDialogVisible().Should().BeTrue(because: "a confirmation dialog should be displayed");
-
-            XrmApp.Dialogs.GetCurrentDialogLable().Should().Be(expectedTitle);
+            expectedTitle = expectedTitle.ReplaceTemplatedText(TestConfig.Parameters);
+            App.Dialogs.HasConfirmationTitle(expectedTitle, out var actual);
+            actual.Should().Be(expectedTitle, because: "a confirmation dialog with the title should be displayed");
         }
     }
 }

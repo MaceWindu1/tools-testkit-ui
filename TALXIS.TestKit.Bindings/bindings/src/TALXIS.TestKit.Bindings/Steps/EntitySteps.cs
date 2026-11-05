@@ -22,10 +22,6 @@
     [Binding]
     public class EntitySteps : PowerAppsStepDefiner
     {
-        private static readonly TimeSpan PortalStateTimeout = TimeSpan.FromSeconds(10);
-        // Tabs and fields of a portal page (or of the record selected in its subgrid) can render well after the page loads.
-        private static readonly TimeSpan PortalRenderTimeout = TimeSpan.FromSeconds(30);
-
         /// <summary>
         /// Selects a tab on the form.
         /// </summary>
@@ -33,18 +29,8 @@
         [When(@"I select the '(.*)' tab")]
         public static void ISelectTab(string tabName)
         {
-            if (TargetsPortal)
-            {
-                // Tab labels can contain record values (e.g. a number), referenced as parameters.
-                tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
-                Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName) != null, PortalRenderTimeout);
-                Driver.SelectPortalTab(tabName, PortalRenderTimeout)
-                    .Should().BeTrue(because: $"the '{tabName}' tab should be the selected one after clicking it");
-                Driver.CloseMenus();
-                return;
-            }
-
-            XrmApp.Entity.SelectTab(tabName);
+            // Tab labels can contain record values (e.g. a number), referenced as parameters.
+            App.Entity.SelectTab(tabName.ReplaceTemplatedText(TestConfig.Parameters));
         }
 
         /// <summary>
@@ -59,28 +45,12 @@
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tabName, nameof(tabName));
 
             bool shouldBeVisible = shouldOrShouldNot.Equals("should", StringComparison.InvariantCultureIgnoreCase);
+            tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
 
-            if (TargetsPortal)
-            {
-                tabName = tabName.ReplaceTemplatedText(TestConfig.Parameters);
-
-                // Tabs are shown or hidden by scripts after the page loads.
-                var visible = shouldBeVisible
-                    ? Driver.WaitForPortalCondition(() => Driver.FindPortalTab(tabName) != null, PortalRenderTimeout)
-                    : !Driver.BecomesAbsent(() => Driver.FindPortalTab(tabName) != null, PortalStateTimeout);
-                Driver.CloseMenus();
-                visible.Should().Be(shouldBeVisible, because: $"The tab '{tabName}' {(shouldBeVisible ? "should" : "should not")} be visible.");
-                return;
-            }
-
-            XrmApp.Entity.IsTabVisible(tabName)
+            App.Entity.IsTabShown(tabName, shouldBeVisible)
                 .Should()
-                .Be(
-                    shouldBeVisible,
-                    because: $"The tab '{tabName}' {(shouldBeVisible ? "should" : "should not")} be visible.");
+                .BeTrue(because: $"The tab '{tabName}' {(shouldBeVisible ? "should" : "should not")} be visible.");
         }
-
-        // !TO-DO: WI:35121 - Remove fieldLocation
 
         /// <summary>
         /// Sets the value for the field.
@@ -90,31 +60,7 @@
         [When(@"I enter '(.*)' into the '(.*)' field on the form")]
         public static void WhenIEnterInTheField(string fieldValue, string fieldLabel)
         {
-            if (TargetsPortal)
-            {
-                Driver.SetPortalFieldValue(Driver.FindPortalField(fieldLabel), fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
-                return;
-            }
-
-            Driver.WaitForPageToLoad();
-
-            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
-
-            string fieldType = MetadataHelper.GetFieldTypeFromDomByLogicalName(fieldLogicalName);
-            string fieldLocation = MetadataHelper.GetFieldLocationFromDomByLogicalName(fieldLogicalName);
-
-            if (fieldLocation == "field")
-            {
-                SetFieldValue(fieldLogicalName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), fieldType);
-            }
-            else
-            {
-                SetHeaderFieldValue(fieldLabel, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), fieldType);
-            }
-
-            Client.TryLoseFocus();
-
-            Driver.WaitForTransaction();
+            App.Entity.SetValue(fieldLabel, fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
         }
 
         /// <summary>
@@ -283,82 +229,8 @@
         {
             expectedValue = expectedValue.ReplaceTemplatedText(TestConfig.Parameters);
 
-            if (TargetsPortal)
-            {
-                // Values may be filled in asynchronously (e.g. a nested form showing the selected record).
-                Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).GetPortalFieldValue() == expectedValue, PortalRenderTimeout);
-                Driver.FindPortalField(fieldLabel).GetPortalFieldValue().Should().Be(expectedValue);
-                return;
-            }
-
-            string fieldLogicalName;
-            string actualValue;
-
-            fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
-
-            string fieldLocation = MetadataHelper.GetFieldLocationFromDomByLogicalName(fieldLogicalName);
-            string fieldType = MetadataHelper.GetFieldTypeFromDomByLogicalName(fieldLogicalName);
-
-            switch (fieldType)
-            {
-                case "currency":
-                case "numeric":
-                case "text":
-                    actualValue = fieldLocation == "field" ? XrmApp.Entity.GetValue(fieldLogicalName) : XrmApp.Entity.GetHeaderValue(fieldLogicalName);
-                    actualValue.Should().Be(expectedValue);
-                    break;
-                case "optionset":
-
-                    OptionSet optionsetField = new()
-                    {
-                        Name = fieldLogicalName
-                    };
-
-                    actualValue = fieldLocation == "field"
-                        ? XrmApp.Entity.GetValue(optionsetField)
-                        : XrmApp.Entity.GetHeaderValue(optionsetField);
-                    actualValue.Should().Be(expectedValue);
-                    break;
-                case "multioptionset":
-                    MultiValueOptionSet multioptionsetField = new()
-                    {
-                        Name = fieldLogicalName,
-                    };
-                    XrmApp.Entity.GetValue(multioptionsetField).Values.Should().Equal(expectedValue);
-                    break;
-                case "lookup":
-                    LookupItem lookupField = new()
-                    {
-                        Name = fieldLogicalName,
-                    };
-                    actualValue = fieldLocation == "field" ? XrmApp.Entity.GetValue(lookupField) : XrmApp.Entity.GetHeaderValue(lookupField);
-                    actualValue.Should().Be(expectedValue);
-                    break;
-                case "datetime":
-                    DateTimeControl datetimeField = new DateTimeControl(fieldLogicalName);
-                    System.DateTime? datetimeActualValue = fieldLocation == "field" ? XrmApp.Entity.GetValue(datetimeField) : XrmApp.Entity.GetHeaderValue(datetimeField);
-
-                    var expectedDateTime = DateTime.Parse(expectedValue, CultureInfo.CurrentCulture);
-
-                    if (expectedValue.Contains(":"))
-                    {
-                        datetimeActualValue.Should().Be(expectedDateTime);
-                    }
-                    else
-                    {
-                        datetimeActualValue.Value.Date.Should().Be(expectedDateTime.Date);
-                    }
-
-                    break;
-                case "boolean":
-                    BooleanItem booleanField = new()
-                    {
-                        Name = fieldLogicalName,
-                    };
-                    bool booleanActualValue = fieldLocation == "field" ? XrmApp.Entity.GetValue(booleanField) : XrmApp.Entity.GetHeaderValue(booleanField);
-                    booleanActualValue.Should().Be(bool.Parse(expectedValue));
-                    break;
-            }
+            App.Entity.HasValue(fieldLabel, expectedValue, out var actualValue)
+                .Should().BeTrue(because: $"the '{fieldLabel}' field should show '{expectedValue}', not '{actualValue}'");
         }
 
         /// <summary>
@@ -369,20 +241,8 @@
         [Then(@"the '(.*)' field should be (mandatory|optional)")]
         public static void ThenTheFieldShouldBeMandatory(string fieldLabel, string requirementLevel)
         {
-            if (TargetsPortal)
-            {
-                var required = requirementLevel == "mandatory";
-
-                // Form scripts may set the requirement level after the form loads.
-                Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldLabel).IsPortalFieldRequired() == required, PortalStateTimeout);
-                Driver.FindPortalField(fieldLabel).IsPortalFieldRequired().Should().Be(required, because: $"the field should be {requirementLevel}");
-                return;
-            }
-
-            string fieldName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
-
-            XrmApp.Entity.GetFieldSectionItemContainertAttribute<int>(fieldLabel, "data-fieldrequirement")
-                .Should().Be(requirementLevel == "mandatory" ? 2 : 0, because: $"the field should be {requirementLevel}");
+            App.Entity.IsFieldRequired(fieldLabel, requirementLevel == "mandatory")
+                .Should().BeTrue(because: $"the field should be {requirementLevel}");
         }
 
         /// <summary>
@@ -480,10 +340,7 @@
         [Then(@"I should be able to edit the '(.*)' field")]
         public static void ThenIShouldBeAbleToEditTheField(string fieldName)
         {
-            var field = XrmApp.Entity.GetField(XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName));
-
-            field.IsVisible.Should().BeTrue(because: "the field must be visible to be editable");
-            field.IsReadOnly(Driver).Should().BeFalse(because: "the field should be editable");
+            App.Entity.IsFieldEditable(fieldName, editable: true).Should().BeTrue(because: "the field should be visible and editable");
         }
 
         /// <summary>
@@ -528,14 +385,7 @@
         [Then(@"I should not be able to edit the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToEditTheField(string fieldName)
         {
-            if (TargetsPortal)
-            {
-                Driver.WaitForPortalCondition(() => Driver.FindPortalField(fieldName).IsPortalFieldReadOnly(), PortalStateTimeout);
-                Driver.FindPortalField(fieldName).IsPortalFieldReadOnly().Should().BeTrue(because: "the field should not be editable");
-                return;
-            }
-
-            XrmApp.Entity.GetField(XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName)).IsReadOnly(Driver).Should().BeTrue(because: "the field should not be editable");
+            App.Entity.IsFieldEditable(fieldName, editable: false).Should().BeTrue(because: "the field should not be editable");
         }
 
         /// <summary>
@@ -560,14 +410,7 @@
         [Then(@"I should be able to see the '(.*)' field")]
         public static void ThenIShouldBeAbleToSeeTheField(string fieldName)
         {
-            if (TargetsPortal)
-            {
-                Driver.WaitForPortalCondition(() => Driver.TryFindPortalField(fieldName)?.Displayed == true, PortalRenderTimeout)
-                    .Should().BeTrue(because: $"the '{fieldName}' field should be visible");
-                return;
-            }
-
-            XrmApp.Entity.IsFieldVisible(Driver, XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName)).Should().BeTrue(because: "the field should be visible");
+            App.Entity.IsFieldShown(fieldName, shown: true).Should().BeTrue(because: $"the '{fieldName}' field should be visible");
         }
 
         /// <summary>
@@ -577,14 +420,7 @@
         [Then(@"I should not be able to see the '(.*)' field")]
         public static void ThenIShouldNotBeAbleToSeeTheField(string fieldName)
         {
-            if (TargetsPortal)
-            {
-                Driver.BecomesAbsent(() => Driver.TryFindPortalField(fieldName)?.Displayed == true, PortalStateTimeout)
-                    .Should().BeTrue(because: $"the '{fieldName}' field should not be visible");
-                return;
-            }
-
-            XrmApp.Entity.IsFieldVisible(Driver, XrmApp.Entity.ResolveFieldLogicalName(Driver, fieldName)).Should().BeFalse(because: "the field should not be visible");
+            App.Entity.IsFieldShown(fieldName, shown: false).Should().BeTrue(because: $"the '{fieldName}' field should not be visible");
         }
 
         /// <summary>
@@ -594,15 +430,7 @@
         [Then(@"the '(.*)' field should be empty")]
         public static void ThenTheFieldShouldBeEmpty(string field)
         {
-            if (TargetsPortal)
-            {
-                Driver.WaitForPortalCondition(() => Driver.FindPortalField(field).GetPortalFieldValue().Length == 0, PortalStateTimeout);
-                Driver.FindPortalField(field).GetPortalFieldValue().Should().BeEmpty(because: $"the '{field}' field should be empty");
-                return;
-            }
-
-            XrmApp.Entity.IsFieldEmpty(Driver, XrmApp.Entity.ResolveFieldLogicalName(Driver, field))
-                .Should().BeTrue(because: $"the '{field}' field should be empty");
+            App.Entity.IsFieldEmpty(field).Should().BeTrue(because: $"the '{field}' field should be empty");
         }
 
         /// <summary>
@@ -642,16 +470,8 @@
         [Then(@"the active tab should be '(.*)'")]
         public static void ThenTheActiveTabShouldBe(string expectedTabLabel)
         {
-            if (TargetsPortal)
-            {
-                expectedTabLabel = expectedTabLabel.ReplaceTemplatedText(TestConfig.Parameters);
-                Driver.WaitForPortalCondition(() => Driver.FindPortalTab(expectedTabLabel)?.IsPortalTabSelected() == true, PortalStateTimeout)
-                    .Should().BeTrue(because: $"the '{expectedTabLabel}' tab should be the active one");
-                Driver.CloseMenus();
-                return;
-            }
-
-            XrmApp.Entity.GetAttributeOfActiveTab("aria-label").Should().Be(expectedTabLabel);
+            expectedTabLabel = expectedTabLabel.ReplaceTemplatedText(TestConfig.Parameters);
+            App.Entity.IsTabSelected(expectedTabLabel).Should().BeTrue(because: $"the '{expectedTabLabel}' tab should be the active one");
         }
 
         private static bool IsSectionVisible(string sectionName)
@@ -675,102 +495,6 @@
             catch (Exception ex)
             {
                 throw new NotFoundException("Unable to determine the status from the form. This can happen if you do not have access to edit the record and the state is not in the header.", ex);
-            }
-        }
-
-        private static void SetFieldValue(string fieldName, string fieldValue, string fieldType)
-        {
-            switch (fieldType)
-            {
-                case "multioptionset":
-                    XrmApp.Entity.SetValue(
-                        new MultiValueOptionSet()
-                        {
-                            Name = fieldName,
-                            Values = fieldValue
-                                        .Split(',')
-                                        .Select(v => v.Trim())
-                                        .ToArray(),
-                        },
-                        true);
-                    break;
-                case "optionset":
-                    bool isNewLookEnabled = AppLookExtensions.IsNewLookEnabled(Driver);
-
-                    XrmApp.Entity.SetValue(new OptionSet()
-                    {
-                        Name = fieldName,
-                        Value = fieldValue,
-                    });
-
-                    break;
-                case "boolean":
-                    XrmApp.Entity.SetValue(new BooleanItem()
-                    {
-                        Name = fieldName,
-                        Value = bool.Parse(fieldValue),
-                    });
-                    break;
-                case "datetime":
-                    XrmApp.Entity.SetValue(new DateTimeControl(fieldName)
-                    {
-                        // !TO-DO: Datetime formattings
-                        Value = DateTime.Parse(fieldValue, CultureInfo.CurrentCulture),
-                    });
-                    break;
-                case "lookup":
-                    XrmApp.Entity.SetValue(new LookupItem()
-                    {
-                        Name = fieldName,
-                        Value = fieldValue,
-                    });
-                    break;
-                case "currency":
-                case "numeric":
-                case "text":
-                default:
-                    XrmApp.Entity.SetValue(fieldName, fieldValue);
-                    break;
-            }
-        }
-
-        private static void SetHeaderFieldValue(string fieldName, string fieldValue, string fieldType)
-        {
-            switch (fieldType)
-            {
-                case "optionset":
-                    XrmApp.Entity.SetHeaderValue(new OptionSet()
-                    {
-                        Name = fieldName,
-                        Value = fieldValue,
-                    });
-                    break;
-                case "boolean":
-                    XrmApp.Entity.SetHeaderValue(new BooleanItem()
-                    {
-                        Name = fieldName,
-                        Value = bool.Parse(fieldValue),
-                    });
-                    break;
-                case "datetime":
-                    XrmApp.Entity.SetHeaderValue(new DateTimeControl(fieldName)
-                    {
-                        Value = DateTime.Parse(fieldValue, CultureInfo.CurrentCulture),
-                    });
-                    break;
-                case "lookup":
-                    XrmApp.Entity.SetHeaderValue(new LookupItem()
-                    {
-                        Name = fieldName,
-                        Value = fieldValue,
-                    });
-                    break;
-                case "currency":
-                case "numeric":
-                case "text":
-                default:
-                    XrmApp.Entity.SetHeaderValue(fieldName, fieldValue);
-                    break;
             }
         }
     }

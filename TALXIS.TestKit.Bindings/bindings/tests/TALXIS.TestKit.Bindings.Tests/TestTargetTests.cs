@@ -21,7 +21,7 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             Assert.AreEqual(TestTarget.Portal, Configure("Portal").Target);
             Assert.AreEqual(TestTarget.ModelDrivenApp, Configure("ModelDrivenApp").Target);
-            Assert.IsNull(Configure(null).Target);
+            Assert.AreEqual(TestTarget.ModelDrivenApp, Configure(null).Target, "Projects written before the portal support set no target.");
         }
 
         [DataTestMethod]

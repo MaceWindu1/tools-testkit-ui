@@ -3,6 +3,7 @@ namespace TALXIS.TestKit.Bindings.Tests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using OpenQA.Selenium;
     using TALXIS.TestKit.Bindings.Extensions;
+    using TALXIS.TestKit.Selectors.WebClientManagement;
 
     [TestClass]
     public class PortalDialogTests
@@ -17,11 +18,11 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("showConfirmationDialog()");
 
-            Assert.AreEqual("Do you want to activate this record?", this.driver.GetPortalAlertDialogTitle());
-            this.driver.AnswerPortalMessageDialog(confirm: true);
+            Assert.AreEqual("Do you want to activate this record?", PortalDialogsManager.GetMessageTitle(this.driver));
+            PortalDialogsManager.AnswerMessageDialog(this.driver, confirm: true);
 
             Assert.AreEqual("confirm", PortalTestPage.Clicks());
-            Assert.IsNull(this.driver.GetPortalAlertDialogTitle());
+            Assert.IsNull(PortalDialogsManager.GetMessageTitle(this.driver));
         }
 
         [TestMethod]
@@ -29,7 +30,7 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("showConfirmationDialog()");
 
-            this.driver.AnswerPortalMessageDialog(confirm: false);
+            PortalDialogsManager.AnswerMessageDialog(this.driver, confirm: false);
 
             Assert.AreEqual("cancel", PortalTestPage.Clicks());
         }
@@ -39,10 +40,10 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("showFormDialog(); showConfirmationDialog()");
 
-            this.driver.AnswerPortalMessageDialog(confirm: true);
+            PortalDialogsManager.AnswerMessageDialog(this.driver, confirm: true);
 
             Assert.AreEqual("confirm", PortalTestPage.Clicks());
-            Assert.IsNotNull(this.driver.FindPortalDialogButton("Continue"), "The form dialog below stays open.");
+            Assert.IsNotNull(PortalDialogsManager.FindButton(this.driver, "Continue"), "The form dialog below stays open.");
         }
 
         [TestMethod]
@@ -50,8 +51,8 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("showFormDialog()");
 
-            Assert.IsNotNull(this.driver.FindPortalDialogButton("Continue"));
-            Assert.IsNull(this.driver.FindPortalDialogButton("Finish"));
+            Assert.IsNotNull(PortalDialogsManager.FindButton(this.driver, "Continue"));
+            Assert.IsNull(PortalDialogsManager.FindButton(this.driver, "Finish"));
         }
 
         [TestMethod]
@@ -60,14 +61,14 @@ namespace TALXIS.TestKit.Bindings.Tests
             PortalTestPage.Run("showFormDialog()");
 
             var clicks = 0;
-            while (this.driver.FindPortalDialogButton("Continue") is { } next && clicks < 10)
+            while (PortalDialogsManager.FindButton(this.driver, "Continue") is { } next && clicks < 10)
             {
                 next.Click();
                 clicks++;
             }
 
             Assert.AreEqual(2, clicks);
-            Assert.IsNotNull(this.driver.FindPortalDialogButton("Finish"));
+            Assert.IsNotNull(PortalDialogsManager.FindButton(this.driver, "Finish"));
         }
 
         [TestMethod]
@@ -75,10 +76,10 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("showFormDialog()");
 
-            this.driver.ClosePortalDialog();
+            PortalDialogsManager.CloseDialog(this.driver);
 
-            Assert.IsNull(this.driver.GetTopmostPortalModal());
-            Assert.AreEqual("C0001", this.driver.TryFindPortalField("Customer number")?.GetPortalFieldValue(), "The page's fields are found again.");
+            Assert.IsNull(PortalPageManager.GetTopmostModal(this.driver));
+            Assert.AreEqual("C0001", PortalFormManager.GetValue(PortalFormManager.TryFindField(this.driver, "Customer number")), "The page's fields are found again.");
         }
 
         [TestMethod]
@@ -86,10 +87,10 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("setTimeout(showFormDialog, 1500)");
 
-            var closed = this.driver.ClosePortalDialog();
+            var closed = PortalDialogsManager.CloseDialog(this.driver);
 
             Assert.IsNotNull(closed);
-            Assert.IsNull(this.driver.GetTopmostPortalModal());
+            Assert.IsNull(PortalPageManager.GetTopmostModal(this.driver));
         }
     }
 }

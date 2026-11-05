@@ -17,8 +17,6 @@
     [Binding]
     public class EntitySubGridSteps : PowerAppsStepDefiner
     {
-        private static readonly TimeSpan PortalGridTimeout = TimeSpan.FromSeconds(30);
-
         /// <summary>
         /// Clicks a command on a subgrid.
         /// </summary>
@@ -27,30 +25,13 @@
         [When(@"I click the '(.*)' command on the '(.*)' subgrid")]
         public static void WhenISelectTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
-            if (TargetsPortal)
-            {
-                var subGrid = Driver.FindPortalSubGrid(subGridName);
-                Driver.WaitForPortalSubGridCommand(subGrid, commandName)
-                    .Should().BeTrue(because: $"the '{commandName}' command should be available on the '{subGridName}' subgrid");
-                Driver.ClickWhenUnblocked(() => Driver.FindPortalSubGridCommand(subGrid, commandName), PortalGridTimeout, $"The '{commandName}' command on the '{subGridName}' subgrid");
-                return;
-            }
-
-            // The command bar is only rendered once the subgrid's ribbon has loaded.
-            Driver
-                .WaitUntilAvailable(
-                    By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subGridName)),
-                    $"Could not find the {subGridName} subgrid.")
-                .WaitUntilAvailable(
-                    By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandBar]),
-                    $"Could not find the command bar of the {subGridName} subgrid.");
-
-            XrmApp.Entity.SubGrid.ClickCommand(subGridName, commandName);
+            App.SubGrid.ClickCommand(subGridName, commandName);
         }
 
         /// <summary>
-        /// Clicks an inline command on the row of a previously created test record in a TALXIS Portal subgrid, as a user
-        /// does, without selecting the record first (a grid can draw the highlight of a selected row over its commands).
+        /// Clicks an inline command on the row of a previously created test record in a subgrid, as a user does, without
+        /// selecting the record first (a grid can draw the highlight of a selected row over its commands). Only a TALXIS
+        /// Portal renders commands on rows.
         /// </summary>
         /// <param name="commandName">The label, id or icon file name of the command.</param>
         /// <param name="alias">The alias of the test record.</param>
@@ -58,14 +39,12 @@
         [When(@"I click the '(.*)' command on '(.*)' in the '(.*)' subgrid")]
         public static void WhenIClickTheCommandOnTheRecordInTheSubgrid(string commandName, string alias, string subGridName)
         {
-            var subGrid = Driver.FindPortalSubGrid(subGridName);
-            var recordId = TestDriver.GetTestRecordReference(alias).Id;
-            ClickPortalRowCommand(commandName, () => subGrid.FindPortalGridRows(recordId), $"'{alias}'");
+            App.SubGrid.ClickRowCommand(subGridName, TestDriver.GetTestRecordReference(alias).Id, commandName);
         }
 
         /// <summary>
-        /// Clicks an inline command on the row of the record that shows a value in a column of a TALXIS Portal subgrid,
-        /// without selecting the record first. Use it for records that are not test records and in the legacy view, whose
+        /// Clicks an inline command on the row of the record that shows a value in a column of a subgrid, without selecting
+        /// the record first. Only a TALXIS Portal renders commands on rows. Use it for records that are not test records and in the legacy view, whose
         /// rows do not carry the record id.
         /// </summary>
         /// <param name="commandName">The label, id or icon file name of the command.</param>
@@ -75,9 +54,7 @@
         [When(@"I click the '(.*)' command on the record with '(.*)' in the '(.*)' field in the '(.*)' subgrid")]
         public static void WhenIClickTheCommandOnTheRecordWithInTheFieldInTheSubgrid(string commandName, string fieldValue, string fieldName, string subGridName)
         {
-            fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
-            var subGrid = Driver.FindPortalSubGrid(subGridName);
-            ClickPortalRowCommand(commandName, () => subGrid.FindPortalGridRowsByValue(fieldName, fieldValue), $"the record with '{fieldValue}' in '{fieldName}'");
+            App.SubGrid.ClickRowCommand(subGridName, fieldName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), commandName);
         }
 
         /// <summary>
@@ -88,19 +65,7 @@
         [When(@"I select '(.*)' from the '(.*)' subgrid")]
         public static void WhenISelectFromTheSubgrid(string alias, string subGridName)
         {
-            if (TargetsPortal)
-            {
-                var subGrid = Driver.FindPortalSubGrid(subGridName);
-                var recordId = TestDriver.GetTestRecordReference(alias).Id;
-                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRows(recordId).Count > 0, PortalGridTimeout);
-                Driver.SelectPortalGridRecord(subGrid.FindPortalGridRows(recordId), $"'{alias}'");
-                return;
-            }
-
-            var index = GetSubGridItemIndexByAlias(alias, subGridName);
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid");
-
-            XrmApp.Entity.SubGrid.HighlightRecord(subGridName, Driver, index.Value);
+            App.SubGrid.SelectRecord(subGridName, TestDriver.GetTestRecordReference(alias).Id);
         }
 
         /// <summary>
@@ -155,18 +120,8 @@
         [Then(@"I should not be able to see '(.*)' in the '(.*)' subgrid")]
         public static void ThenIShouldNotBeAbleToSeeInTheSubgrid(string alias, string subGridName)
         {
-            if (TargetsPortal)
-            {
-                var subGrid = Driver.FindPortalSubGrid(subGridName);
-                var recordId = TestDriver.GetTestRecordReference(alias).Id;
-                Driver.BecomesAbsent(() => subGrid.FindPortalGridRows(recordId).Count > 0, PortalGridTimeout)
-                    .Should().BeTrue(because: $"'{alias}' should not be shown in the '{subGridName}' subgrid");
-                return;
-            }
-
-            GetSubGridItemIndexByAlias(alias, subGridName)
-                .HasValue
-                .Should().BeFalse(because: "the record should not exist in the subgrid");
+            App.SubGrid.ContainsRecord(subGridName, TestDriver.GetTestRecordReference(alias).Id, contained: false)
+                .Should().BeTrue(because: $"'{alias}' should not be shown in the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -179,13 +134,7 @@
         [Then(@"I should be able to see (exactly|more than|less than) (\d+) records in the '(.*)' subgrid")]
         public static void ThenIShouldBeAbleToSeeRecordsInTheSubgrid(string compare, int count, string subGridName)
         {
-            // var actualCount = XrmApp.Entity.SubGrid.GetSubGridItemsCount(subGridName);
-            // Temporary until XrmApp.Entity.SubGrid.GetSubGridItemsCount(subGridName) works for a count of 0
-            // https://github.com/microsoft/EasyRepro/issues/1318
-            var actualCount = TargetsPortal
-                ? Driver.FindPortalSubGrid(subGridName).CountPortalGridRecords()
-                : (long)Driver.ExecuteScript($"return Xrm.Page.getControl(\"{subGridName}\").getGrid().getTotalRecordCount();");
-
+            var actualCount = App.SubGrid.CountRecords(subGridName);
 
             switch (compare)
             {
@@ -209,18 +158,8 @@
         [Then(@"the '(.*)' subgrid should contain '(.*)'")]
         public static void ThenTheGridShouldContain(string subGridName, string recordAlias)
         {
-            if (TargetsPortal)
-            {
-                var subGrid = Driver.FindPortalSubGrid(subGridName);
-                var recordId = TestDriver.GetTestRecordReference(recordAlias).Id;
-                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRows(recordId).Count > 0, PortalGridTimeout)
-                    .Should().BeTrue(because: $"'{recordAlias}' should be shown in the '{subGridName}' subgrid");
-                return;
-            }
-
-            var index = GetSubGridItemIndexByAlias(recordAlias, subGridName);
-
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid");
+            App.SubGrid.ContainsRecord(subGridName, TestDriver.GetTestRecordReference(recordAlias).Id, contained: true)
+                .Should().BeTrue(because: $"'{recordAlias}' should be shown in the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -289,19 +228,9 @@
         [Then(@"the '(.*)' subgrid should contain a record with '(.*)' in the '(.*)' (?:text|numeric|currency|lookup|datetime|optionset|multioptionset|boolean) field")]
         public static void ThenTheSubgridShouldContainRecordsWithInTheField(string subGridName, string fieldValue, string fieldName)
         {
-            if (TargetsPortal)
-            {
-                fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
-                var subGrid = Driver.FindPortalSubGrid(subGridName);
-                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRowsByValue(fieldName, fieldValue).Count > 0, PortalGridTimeout)
-                    .Should().BeTrue(because: $"a record with '{fieldValue}' in '{fieldName}' should be shown in the '{subGridName}' subgrid");
-                return;
-            }
-
-            XrmApp.Entity.SubGrid
-                .GetSubGridItems(subGridName)
-                .Should()
-                .Contain(item => item.GetAttribute<string>(fieldName) == fieldValue, because: "a matching record should be present in the subgrid");
+            fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
+            App.SubGrid.ContainsRecord(subGridName, fieldName, fieldValue)
+                .Should().BeTrue(because: $"a record with '{fieldValue}' in '{fieldName}' should be shown in the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -312,20 +241,8 @@
         [Then(@"I should be able to see the '(.*)' command on the '(.*)' subgrid")]
         public static void ThenIShouldBeAbleToSeeTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
-            if (TargetsPortal)
-            {
-                Driver.WaitForPortalSubGridCommand(Driver.FindPortalSubGrid(subGridName), commandName)
-                    .Should().BeTrue(because: $"the '{commandName}' command should be shown on the '{subGridName}' subgrid");
-                return;
-            }
-
-            Driver
-                .WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subGridName)))
-                .WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandBar]))
-                .WaitUntilVisible(
-                    By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandLabel].Replace("[NAME]", commandName)),
-                    new TimeSpan(0, 0, 5),
-                    $"Could not find the {commandName} command on the {subGridName} subgrid.");
+            App.SubGrid.IsCommandShown(subGridName, commandName, shown: true)
+                .Should().BeTrue(because: $"the '{commandName}' command should be shown on the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -347,14 +264,8 @@
         [Then(@"I should not be able to see the '(.*)' command on the '(.*)' subgrid")]
         public static void ThenIShouldNotBeAbleToSeeTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
-            if (TargetsPortal)
-            {
-                Driver.IsPortalSubGridCommandUnavailable(Driver.FindPortalSubGrid(subGridName), commandName)
-                    .Should().BeTrue(because: $"the '{commandName}' command should not be shown on the '{subGridName}' subgrid");
-                return;
-            }
-
-            XrmApp.Entity.SubGrid.TryToFindAssertSubgridCommand(commandName, subGridName).Should().BeNull();
+            App.SubGrid.IsCommandShown(subGridName, commandName, shown: false)
+                .Should().BeTrue(because: $"the '{commandName}' command should not be shown on the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -367,13 +278,8 @@
         [Then(@"the '(.*)' command on the '(.*)' subgrid should be enabled")]
         public static void ThenTheCommandOnTheSubgridShouldBeEnabled(string commandName, string subGridName)
         {
-            if (TargetsPortal)
-            {
-                ThenIShouldBeAbleToSeeTheCommandOnTheSubgrid(commandName, subGridName);
-                return;
-            }
-
-            IsSubgridCommandEnabled(commandName, subGridName).Should().BeTrue(because: $"the '{commandName}' command should be enabled");
+            App.SubGrid.IsCommandEnabled(subGridName, commandName, enabled: true)
+                .Should().BeTrue(because: $"the '{commandName}' command should be enabled");
         }
 
         /// <summary>
@@ -384,26 +290,8 @@
         [Then(@"the '(.*)' command on the '(.*)' subgrid should be disabled")]
         public static void ThenTheCommandOnTheSubgridShouldBeDisabled(string commandName, string subGridName)
         {
-            // The portal does not render commands whose enable rules fail.
-            if (TargetsPortal)
-            {
-                ThenIShouldNotBeAbleToSeeTheCommandOnTheSubgrid(commandName, subGridName);
-                return;
-            }
-
-            IsSubgridCommandEnabled(commandName, subGridName).Should().BeFalse(because: $"the '{commandName}' command should be disabled");
-        }
-
-        private static bool IsSubgridCommandEnabled(string commandName, string subGridName)
-        {
-            var command = XrmApp.Entity.SubGrid.TryToFindAssertSubgridCommand(commandName, subGridName);
-
-            command.Should().NotBeNull(because: $"the '{commandName}' command should be present (visible-but-disabled, not hidden) on the '{subGridName}' subgrid");
-
-            var ariaDisabled = command!.GetAttribute("aria-disabled");
-            var disabled = command.GetAttribute("disabled");
-
-            return ariaDisabled != "true" && string.IsNullOrEmpty(disabled);
+            App.SubGrid.IsCommandEnabled(subGridName, commandName, enabled: false)
+                .Should().BeTrue(because: $"the '{commandName}' command should be disabled");
         }
 
         /// <summary>
@@ -448,43 +336,7 @@
         [When(@"I select a record with '(.*)' in the '(.*)' field in the '(.*)' subgrid")]
         public static void WhenISelectARecordWithInTheFieldInTheSubgrid(string fieldValue, string fieldName, string subGridName)
         {
-            if (TargetsPortal)
-            {
-                fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
-                var subGrid = Driver.FindPortalSubGrid(subGridName);
-                Driver.WaitForPortalCondition(() => subGrid.FindPortalGridRowsByValue(fieldName, fieldValue).Count > 0, PortalGridTimeout);
-                Driver.SelectPortalGridRecord(subGrid.FindPortalGridRowsByValue(fieldName, fieldValue), $"The record with '{fieldValue}' in '{fieldName}'");
-                return;
-            }
-
-            List<GridItem> subGridItems = XrmApp.Entity.SubGrid.GetSubGridItems(subGridName);
-
-            GridItem subGridItem = subGridItems.FirstOrDefault(item => item.GetAttribute<string>(fieldName) == fieldValue);
-
-            if (subGridItem != default(GridItem))
-            {
-                XrmApp.Entity.SubGrid.HighlightRecord(subGridName, Driver, subGridItems.IndexOf(subGridItem));
-            }
-            else
-            {
-                throw new Exception($"Could not find record with field '{fieldName}' with value '{fieldValue}' in the '{subGridName}' subgrid.");
-            }
-        }
-
-        private static void ClickPortalRowCommand(string commandName, Func<IReadOnlyList<IWebElement>> findRows, string description)
-        {
-            var available = Driver.WaitForPortalCondition(() => Driver.FindPortalRowCommand(findRows(), commandName) is { } command && !command.IsPortalElementDisabled(), PortalGridTimeout);
-            Driver.CloseMenus();
-            available.Should().BeTrue(because: $"the '{commandName}' command should be available on the row of {description}");
-            Driver.ClickWhenUnblocked(() => Driver.FindPortalRowCommand(findRows(), commandName), PortalGridTimeout, $"The '{commandName}' command on {description}");
-        }
-
-        private static int? GetSubGridItemIndexByAlias(string recordAlias, string subGridName)
-        {
-            var record = TestDriver.GetTestRecordReference(recordAlias);
-            var index = XrmApp.Entity.SubGrid.GetRecordIndexById(subGridName, Driver, record.Id);
-
-            return index > -1 ? index : default(int?);
+            App.SubGrid.SelectRecord(subGridName, fieldName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
         }
     }
 }

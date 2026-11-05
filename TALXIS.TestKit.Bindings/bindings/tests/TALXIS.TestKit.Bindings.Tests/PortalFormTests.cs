@@ -4,6 +4,7 @@ namespace TALXIS.TestKit.Bindings.Tests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using OpenQA.Selenium;
     using TALXIS.TestKit.Bindings.Extensions;
+    using TALXIS.TestKit.Selectors.WebClientManagement;
 
     [TestClass]
     public class PortalFormTests
@@ -16,34 +17,34 @@ namespace TALXIS.TestKit.Bindings.Tests
         [TestMethod]
         public void FindsATabByItsLabelWithoutItsIconOrByItsName()
         {
-            Assert.IsNotNull(this.driver.FindPortalTab("Overview"));
-            Assert.IsNotNull(this.driver.FindPortalTab("SigningTab"));
-            Assert.IsNull(this.driver.FindPortalTab("Statistics"));
+            Assert.IsNotNull(PortalFormManager.FindTab(this.driver, "Overview"));
+            Assert.IsNotNull(PortalFormManager.FindTab(this.driver, "SigningTab"));
+            Assert.IsNull(PortalFormManager.FindTab(this.driver, "Statistics"));
         }
 
         [TestMethod]
         public void TellsWhichTabIsSelected()
         {
-            Assert.IsTrue(this.driver.FindPortalTab("Overview").IsPortalTabSelected());
+            Assert.IsTrue(PortalFormManager.IsTabSelected(PortalFormManager.FindTab(this.driver, "Overview")));
 
-            this.driver.FindPortalTab("Signing").Click();
+            PortalFormManager.FindTab(this.driver, "Signing").Click();
 
-            Assert.IsTrue(this.driver.FindPortalTab("Signing").IsPortalTabSelected());
-            Assert.IsFalse(this.driver.FindPortalTab("Overview").IsPortalTabSelected());
+            Assert.IsTrue(PortalFormManager.IsTabSelected(PortalFormManager.FindTab(this.driver, "Signing")));
+            Assert.IsFalse(PortalFormManager.IsTabSelected(PortalFormManager.FindTab(this.driver, "Overview")));
         }
 
         [TestMethod]
         public void SelectsATabWhosePageDroppedTheFirstClick()
         {
-            Assert.IsTrue(this.driver.SelectPortalTab("Charts", TimeSpan.FromSeconds(10)));
+            Assert.IsTrue(PortalFormManager.SelectTab(this.driver, "Charts", TimeSpan.FromSeconds(10)));
 
-            Assert.IsTrue(this.driver.FindPortalTab("Charts").IsPortalTabSelected());
+            Assert.IsTrue(PortalFormManager.IsTabSelected(PortalFormManager.FindTab(this.driver, "Charts")));
         }
 
         [TestMethod]
         public void LeavesTheSelectedTabAlone()
         {
-            Assert.IsTrue(this.driver.SelectPortalTab("Overview", TimeSpan.FromSeconds(10)));
+            Assert.IsTrue(PortalFormManager.SelectTab(this.driver, "Overview", TimeSpan.FromSeconds(10)));
         }
 
         [TestMethod]
@@ -51,31 +52,31 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("rerenderTabsFor(3000)");
 
-            Assert.IsTrue(this.driver.SelectPortalTab("Signing", TimeSpan.FromSeconds(10)));
-            Assert.IsTrue(this.driver.WaitForPortalCondition(() => this.driver.FindPortalTab("Signing").IsPortalTabSelected(), TimeSpan.FromSeconds(5)));
+            Assert.IsTrue(PortalFormManager.SelectTab(this.driver, "Signing", TimeSpan.FromSeconds(10)));
+            Assert.IsTrue(PortalPageManager.WaitFor(this.driver, () => PortalFormManager.IsTabSelected(PortalFormManager.FindTab(this.driver, "Signing")), TimeSpan.FromSeconds(5)));
         }
 
         [TestMethod]
         public void ReadsAFieldByItsLabelOrLogicalName()
         {
-            Assert.AreEqual("C0001", this.driver.TryFindPortalField("Customer number")?.GetPortalFieldValue());
-            Assert.IsNotNull(this.driver.TryFindPortalField("talxis_internalid"));
-            Assert.IsNull(this.driver.TryFindPortalField("Missing field"));
+            Assert.AreEqual("C0001", PortalFormManager.GetValue(PortalFormManager.TryFindField(this.driver, "Customer number")));
+            Assert.IsNotNull(PortalFormManager.TryFindField(this.driver, "talxis_internalid"));
+            Assert.IsNull(PortalFormManager.TryFindField(this.driver, "Missing field"));
         }
 
         [TestMethod]
         public void ReadsTheFieldsOfANestedForm()
         {
-            Assert.AreEqual("Open request", this.driver.TryFindPortalField("Subject")?.GetPortalFieldValue());
-            Assert.AreEqual("North branch", this.driver.TryFindPortalField("Operating unit")?.GetPortalFieldValue());
+            Assert.AreEqual("Open request", PortalFormManager.GetValue(PortalFormManager.TryFindField(this.driver, "Subject")));
+            Assert.AreEqual("North branch", PortalFormManager.GetValue(PortalFormManager.TryFindField(this.driver, "Operating unit")));
         }
 
         [TestMethod]
         public void TakesTheOnlySuggestionOfALookupOnceTheSearchNarrowsItDown()
         {
-            this.driver.SetPortalFieldValue(this.driver.FindPortalField("Contract"), "Main contract");
+            PortalFormManager.SetValue(this.driver, PortalFormManager.FindField(this.driver, "Contract"), "Main contract");
 
-            Assert.AreEqual("C-002", this.driver.FindPortalField("Contract").GetPortalFieldValue());
+            Assert.AreEqual("C-002", PortalFormManager.GetValue(PortalFormManager.FindField(this.driver, "Contract")));
         }
 
         [TestMethod]
@@ -83,7 +84,7 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             PortalTestPage.Run("showFormDialog()");
 
-            Assert.IsNull(this.driver.TryFindPortalField("Customer number"), "A field of the page behind the dialog is not found.");
+            Assert.IsNull(PortalFormManager.TryFindField(this.driver, "Customer number"), "A field of the page behind the dialog is not found.");
         }
     }
 }

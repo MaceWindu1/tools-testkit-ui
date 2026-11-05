@@ -29,22 +29,7 @@
         [Given("I am logged in to the '(.*)' app as '(.*)'")]
         public static void GivenIAmLoggedInToTheAppAs(string appName, string userAlias)
         {
-            var user = TestConfig.GetUser(userAlias, useCurrentUser: false);
-            var url = TestConfig.GetTestUrl();
-            var driver = Driver;
-
-            Login(driver, url, user);
-
-            if (!url.Query.Contains("appid"))
-            {
-                XrmApp.Navigation.OpenApp(appName);
-            }
-
-            Driver.WaitForTransaction();
-
-            CloseTeachingBubbles();
-
-            WaitForMainPage(driver);
+            LogIn(TestConfig.GetTestUrl(), TestConfig.GetUser(userAlias, useCurrentUser: false), appName);
         }
 
         /// <summary>
@@ -55,22 +40,30 @@
         [Given(@"I am logged in as '(.*)'")]
         public static void GivenIAmLoggedInAs(string userAlias)
         {
-            switch (TestConfig.Target)
-            {
-                case TestTarget.Portal:
-                    PortalLoginSteps.GivenIAmLoggedInToThePortalAs(userAlias);
-                    break;
-                case TestTarget.ModelDrivenApp:
-                    if (!TestConfig.GetTestUrl().Query.Contains("appid"))
-                    {
-                        throw new InvalidOperationException("Logging in without naming the app needs the app's appid in the test URL.");
-                    }
+            var user = TestConfig.GetUser(userAlias, useCurrentUser: false);
+            App.Login.LogIn(TestConfig.GetTestUrl(), user.Username.ToSecureString(), user.Password?.ToSecureString(), user.OtpToken?.ToSecureString());
+        }
 
-                    GivenIAmLoggedInToTheAppAs(appName: null, userAlias);
-                    break;
-                default:
-                    throw new InvalidOperationException("Set the Target (ModelDrivenApp or Portal) in the configuration to log in without naming the app.");
+        /// <summary>
+        /// Logs in to a model-driven app, reusing the sign-in cookies of an earlier scenario.
+        /// </summary>
+        /// <param name="url">The URL of the app.</param>
+        /// <param name="user">The user.</param>
+        /// <param name="appName">The app to open when the URL names none (by its appid).</param>
+        internal static void LogIn(Uri url, UserConfiguration user, string appName)
+        {
+            Login(Driver, url, user);
+
+            if (!url.Query.Contains("appid"))
+            {
+                XrmApp.Navigation.OpenApp(appName);
             }
+
+            Driver.WaitForTransaction();
+
+            CloseTeachingBubbles();
+
+            WaitForMainPage(Driver);
         }
 
         private static void Login(IWebDriver driver, Uri url, UserConfiguration user)

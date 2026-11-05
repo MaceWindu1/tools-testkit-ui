@@ -1,13 +1,7 @@
 ﻿namespace TALXIS.TestKit.Bindings.Steps
 {
-    using System;
-    using System.Linq;
     using FluentAssertions;
-    using OpenQA.Selenium;
     using Reqnroll;
-    using TALXIS.TestKit.Bindings.Extensions;
-    using TALXIS.TestKit.Selectors;
-    using TALXIS.TestKit.Selectors.Browser;
 
     /// <summary>
     /// Step bindings relating to navigation.
@@ -15,9 +9,6 @@
     [Binding]
     public class NavigationSteps : PowerAppsStepDefiner
     {
-        private static readonly TimeSpan PortalNavigationTimeout = TimeSpan.FromSeconds(10);
-        private static readonly TimeSpan PortalPageLoadTimeout = TimeSpan.FromSeconds(60);
-
         /// <summary>
         /// Opens a sub-area from the navigation bar.
         /// </summary>
@@ -95,17 +86,7 @@
         [Then(@"I should see the '(.*)' subarea")]
         public static void ThenIShouldSeeTheSubArea(string subArea)
         {
-            if (TargetsPortal)
-            {
-                Driver.WaitForPortalCondition(() => Driver.FindPortalSiteMapItem(subArea) != null, PortalNavigationTimeout)
-                    .Should().BeTrue(because: $"the '{subArea}' subarea should be shown");
-                return;
-            }
-
-            var subAreaElement = XrmApp.Navigation.GetSubAreaElement(subArea);
-
-            subAreaElement.Should().NotBeNull("the subarea image should be present");
-            subAreaElement.Displayed.Should().BeTrue("the subarea image should be visible");
+            App.Navigation.IsSubAreaShown(subArea, shown: true).Should().BeTrue(because: $"the '{subArea}' subarea should be shown");
         }
 
         /// <summary>
@@ -128,17 +109,7 @@
         [When(@"I open the '(.*)' page from the navigation")]
         public static void WhenIOpenThePageFromTheNavigation(string subareaLabel)
         {
-            if (!TargetsPortal)
-            {
-                XrmApp.Navigation.OpenSubArea(subareaLabel);
-                return;
-            }
-
-            Driver.WaitForPortalCondition(() => Driver.FindPortalSiteMapItem(subareaLabel) is { } item && !item.IsPortalElementDisabled(), PortalNavigationTimeout)
-                .Should().BeTrue(because: $"the '{subareaLabel}' subarea should be shown and enabled");
-
-            Driver.ClickWhenUnblocked(() => Driver.FindPortalSiteMapItem(subareaLabel), PortalNavigationTimeout, $"The '{subareaLabel}' subarea");
-            Driver.WaitForPortalReady(PortalPageLoadTimeout, $"The '{subareaLabel}' page did not finish loading.");
+            App.Navigation.OpenPage(subareaLabel);
         }
 
         /// <summary>
@@ -148,11 +119,7 @@
         [Then(@"I should not see the '(.*)' subarea")]
         public static void ThenIShouldNotSeeTheSubarea(string subareaLabel)
         {
-            var shown = TargetsPortal
-                ? !Driver.BecomesAbsent(() => Driver.FindPortalSiteMapItem(subareaLabel) != null, PortalNavigationTimeout)
-                : Driver.FindElements(By.XPath($"//img[@title={PortalFormExtensions.XPathLiteral(subareaLabel)}]")).Count > 0;
-
-            shown.Should().BeFalse(because: $"the '{subareaLabel}' subarea should not be shown");
+            App.Navigation.IsSubAreaShown(subareaLabel, shown: false).Should().BeTrue(because: $"the '{subareaLabel}' subarea should not be shown");
         }
 
         /// <summary>
@@ -164,19 +131,8 @@
         [Then(@"the '(.*)' subarea should be disabled with the message '(.*)'")]
         public static void ThenTheSubareaShouldBeDisabledWithTheMessage(string subareaLabel, string expectedMessage)
         {
-            if (!TargetsPortal)
-            {
-                throw new NotSupportedException("Only a TALXIS Portal can disable a navigation item.");
-            }
-
-            Driver.WaitForPortalCondition(
-                () => Driver.FindPortalSiteMapItem(subareaLabel) is { } item && item.IsPortalElementDisabled() && item.GetAttribute("title") == expectedMessage,
-                PortalNavigationTimeout);
-
-            var item = Driver.FindPortalSiteMapItem(subareaLabel);
-            item.Should().NotBeNull(because: $"the '{subareaLabel}' subarea should be shown");
-            item.IsPortalElementDisabled().Should().BeTrue(because: $"the '{subareaLabel}' subarea should be disabled");
-            item.GetAttribute("title").Should().Be(expectedMessage);
+            App.Navigation.IsSubAreaDisabled(subareaLabel, expectedMessage)
+                .Should().BeTrue(because: $"the '{subareaLabel}' subarea should be shown disabled with the message '{expectedMessage}'");
         }
     }
 }

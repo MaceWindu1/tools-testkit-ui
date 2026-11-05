@@ -18,7 +18,7 @@
             this.BrowserOptions = configuration.GetSection("BrowserOptions").Get<BrowserOptionsWithProfileSupport>();
             this.Users = configuration.GetSection("Users").Get<List<UserConfiguration>>();
             this.Url = configuration["Url"];
-            this.Target = configuration.GetValue<TestTarget?>("Target");
+            this.Target = configuration.GetValue("Target", TestTarget.ModelDrivenApp);
             this.DataverseUrl = configuration["DataverseUrl"];
             this.SuppressFlowsForTestData = configuration.GetValue<bool>("SuppressFlowsForTestData");
             this.UseProfiles = configuration.GetValue<bool>("UseProfiles");
@@ -39,10 +39,10 @@
         public string Url { get; set; }
 
         /// <summary>
-        /// Gets or sets the kind of app at <see cref="Url"/>. When it is not set, steps that act on either kind tell them
-        /// apart by the open page, and the login step that does not name the kind cannot be used.
+        /// Gets or sets the kind of app at <see cref="Url"/>, which the steps that act on either kind of app act on: a
+        /// model-driven app unless a TALXIS Portal is configured, as projects written before the portal support expect.
         /// </summary>
-        public TestTarget? Target { get; set; }
+        public TestTarget Target { get; set; }
 
         /// <summary>
         /// Gets or sets the URL of the Dataverse environment holding the test data, when it is not the app under test
