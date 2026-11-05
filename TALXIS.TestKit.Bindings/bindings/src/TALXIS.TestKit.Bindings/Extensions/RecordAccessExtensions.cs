@@ -18,12 +18,17 @@ namespace TALXIS.TestKit.Bindings.Extensions
     public static class RecordAccessExtensions
     {
         // Queries the record by its id, so that a record the filters exclude comes back as no record rather than an error.
+        // A table's key is <table>id, except for activity tables, whose key is activityid: the query retries with it when
+        // the table has no <table>id column.
         // The result has no 'error' key: Selenium reads a returned object with one as a failed command.
         private const string ReadScript =
             @"const [entity, id] = arguments;
-              return Xrm.WebApi.retrieveMultipleRecords(entity, '?$select=' + entity + 'id&$filter=' + entity + 'id eq ' + id)
+              const query = key => Xrm.WebApi.retrieveMultipleRecords(entity, '?$select=' + key + '&$filter=' + key + ' eq ' + id);
+              const messageOf = error => (error && (error.message || JSON.stringify(error))) || String(error);
+              return query(entity + 'id')
+                .catch(error => messageOf(error).includes(""property named '"" + entity + ""id'"") ? query('activityid') : Promise.reject(error))
                 .then(result => ({ count: result.entities.length }),
-                      error => ({ failure: (error && (error.message || JSON.stringify(error))) || String(error) }));";
+                      error => ({ failure: messageOf(error) }));";
 
         /// <summary>
         /// Reads a record as the signed-in user.
