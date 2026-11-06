@@ -1,15 +1,9 @@
 ﻿namespace TALXIS.TestKit.Bindings.Steps
 {
     using System;
-    using System.Globalization;
-    using System.IO;
-    using System.Linq;
     using FluentAssertions;
-    using OpenQA.Selenium;
     using Reqnroll;
     using TALXIS.TestKit.Bindings.Extensions;
-    using TALXIS.TestKit.Selectors;
-    using TALXIS.TestKit.Selectors.Browser;
 
     /// <summary>
     /// Step bindings related to dialogs.
@@ -17,6 +11,9 @@
     [Binding]
     public class CustomDialogSteps : PowerAppsStepDefiner
     {
+        // A safety cap against an infinite loop if a button never disappears.
+        private const int MaxClicks = 50;
+
         /// <summary>
         /// Click a button on a custom dialog.
         /// </summary>
@@ -25,7 +22,88 @@
         [When(@"I click the '(.*)' button on the displayed dialog")]
         public static void WhenIClickButtonOnCustomDialog(string buttonLabel)
         {
-            bool isNewLookEnabled = AppLookExtensions.IsNewLookEnabled(Driver);
+            App.Dialogs.ClickButton(buttonLabel);
+        }
+
+        /// <summary>
+        /// Selects an option of a choice group (e.g. option set tiles) on the displayed dialog.
+        /// </summary>
+        /// <param name="option">The option label.</param>
+        [When(@"I choose the '(.*)' option on the dialog")]
+        public static void WhenIChooseTheOptionOnTheDialog(string option)
+        {
+            App.Dialogs.ChooseOption(option);
+        }
+
+        /// <summary>
+        /// Asserts that a button is present on the displayed dialog.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible label, title or aria-label.</param>
+        [Then(@"I should be able to see the '(.*)' button on the displayed dialog")]
+        public static void ThenIShouldBeAbleToSeeTheButtonOnTheDisplayedDialog(string buttonLabel)
+        {
+            App.Dialogs.IsButtonShown(buttonLabel, shown: true)
+                .Should().BeTrue(because: $"the '{buttonLabel}' button should be present on the displayed dialog");
+        }
+
+        /// <summary>
+        /// Asserts that a button is not present on the displayed dialog.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible title or aria-label.</param>
+        [Then(@"I should not be able to see the '(.*)' button on the displayed dialog")]
+        public static void ThenIShouldNotBeAbleToSeeTheButtonOnTheDisplayedDialog(string buttonLabel)
+        {
+            App.Dialogs.IsButtonShown(buttonLabel, shown: false)
+                .Should().BeTrue(because: $"the '{buttonLabel}' button should not be present on the displayed dialog");
+        }
+
+        /// <summary>
+        /// Closes the displayed dialog via its own close ('x') control, without saving.
+        /// </summary>
+        [When(@"I close the displayed dialog without saving")]
+        public static void WhenICloseTheDisplayedDialogWithoutSaving()
+        {
+            App.Dialogs.CloseWithoutSaving();
+        }
+
+        /// <summary>
+        /// Repeatedly clicks a button on the displayed dialog until it is no longer present. Useful
+        /// for a multi-step/wizard-style dialog's own "Continue"/"Next" button, to reach its last step
+        /// without knowing how many steps it has.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible title or aria-label.</param>
+        [When(@"I click the '(.*)' button on the displayed dialog repeatedly until it is no longer available")]
+        public static void WhenIClickTheButtonOnTheDisplayedDialogRepeatedlyUntilItIsNoLongerAvailable(string buttonLabel)
+        {
+            var clicks = 0;
+            while (clicks < MaxClicks && App.Dialogs.TryClickButton(buttonLabel))
+            {
+                clicks++;
+            }
+
+            clicks.Should().BeGreaterThan(0, because: $"the '{buttonLabel}' button should be on the displayed dialog");
+            clicks.Should().BeLessThan(MaxClicks, because: $"the '{buttonLabel}' button should stop being offered");
+        }
+
+        /// <summary>
+        /// Repeatedly clicks a button on the displayed dialog until an element containing the given
+        /// text becomes visible. Useful for navigating a multi-step/wizard-style dialog to a specific
+        /// step by its label, without a known step-index mapping.
+        /// </summary>
+        /// <param name="buttonLabel">The button's visible title or aria-label.</param>
+        /// <param name="text">Text expected to become visible once the target step is reached.</param>
+        [When(@"I click the '(.*)' button on the displayed dialog repeatedly until '(.*)' is visible")]
+        public static void WhenIClickTheButtonOnTheDisplayedDialogRepeatedlyUntilIsVisible(string buttonLabel, string text)
+        {
+            for (int i = 0; i < MaxClicks && !App.Dialogs.IsTextShown(text); i++)
+            {
+                if (!App.Dialogs.TryClickButton(buttonLabel))
+                {
+                    break;
+                }
+            }
+
+            App.Dialogs.IsTextShown(text).Should().BeTrue(because: $"'{text}' should become visible after repeatedly clicking '{buttonLabel}'");
         }
 
         /// <summary>
@@ -51,11 +129,7 @@
         [When("^I enter '(.*)' into the '(.*)' field on the dialog$")]
         public static void WhenIEnterInTheFieldOnTheDialog(string fieldValue, string fieldLabel)
         {
-            string fieldName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
-
-            SetFieldValue(fieldName, fieldValue.ReplaceTemplatedText());
-
-            Driver.WaitForTransaction();
+            App.Dialogs.SetFieldValue(fieldLabel, fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
         }
 
         /// <summary>
@@ -65,15 +139,13 @@
         [Then(@"^a dialog (should|should not) be displayed$")]
         public static void ThenADialogShouldBeDisplayed(string shouldOrShouldNot)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(shouldOrShouldNot,nameof(shouldOrShouldNot));
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(shouldOrShouldNot, nameof(shouldOrShouldNot));
 
             bool shouldBeVisible = shouldOrShouldNot.Equals("should", StringComparison.InvariantCultureIgnoreCase);
 
-            XrmApp.Dialogs.IsDialogVisible()
+            App.Dialogs.IsDialogShown(shouldBeVisible)
                 .Should()
-                .Be(
-                    shouldBeVisible,
-                    because: $"A dialog {(shouldBeVisible ? "should" : "should not")} be displayed.");
+                .BeTrue(because: $"A dialog {(shouldBeVisible ? "should" : "should not")} be displayed.");
         }
 
         /// <summary>
@@ -83,9 +155,8 @@
         [Then(@"a dialog with '(.*)' title should be displayed")]
         public static void ThenADialogWithTitleShouldBeDisplayed(string dialogTitle)
         {
-            string dialogTitleElement = XrmApp.Dialogs.GetCurrentDialogLable();
-
-            dialogTitleElement.Should().Be(dialogTitle);
+            App.Dialogs.HasTitle(dialogTitle, out var actual);
+            actual.Should().Be(dialogTitle);
         }
 
         /// <summary>
@@ -104,6 +175,19 @@
         }
 
         /// <summary>
+        /// Asserts that a field on the displayed dialog shows a validation error (e.g. set by a script with setIsValid).
+        /// </summary>
+        /// <param name="fieldLabel">The field label.</param>
+        /// <param name="errorMessage">The expected error message.</param>
+        [Then("the '(.*)' field on the dialog should show the error '(.*)'")]
+        public static void ThenTheFieldOnTheDialogShouldShowTheError(string fieldLabel, string errorMessage)
+        {
+            App.Dialogs.HasFieldError(fieldLabel, errorMessage)
+                .Should()
+                .BeTrue(because: $"the '{fieldLabel}' field should show the error '{errorMessage}'");
+        }
+
+        /// <summary>
         /// Asserts that a value is shown in a field.
         /// </summary>
         /// <param name="expectedValue">The expected value.</param>
@@ -111,115 +195,8 @@
         [Then("I should be able to see a value of '(.*)' in the '(.*)' field on the dialog")]
         public static void ThenIShouldBeAbleToSeeAValueInTheFieldOnTheDialog(string expectedValue, string fieldLabel)
         {
-            string fieldLogicalName;
-            string actualValue;
-
-            fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
-            string fieldType = MetadataHelper.GetFieldTypeFromDomByLogicalName(fieldLogicalName);
-
-            bool isNewLookEnabled = AppLookExtensions.IsNewLookEnabled(Driver);
-
-            switch (fieldType)
-            {
-                case "currency":
-                case "numeric":
-                case "text":
-                    actualValue = XrmApp.Entity.GetValue(fieldLogicalName);
-                    actualValue.Should().Be(expectedValue);
-                    break;
-                case "optionset":
-                    OptionSet optionsetField = new()
-                    {
-                        Name = fieldLogicalName,
-                    };
-                    actualValue = XrmApp.Entity.GetValue(optionsetField);
-                    actualValue.Should().Be(expectedValue);
-
-                    break;
-                case "multioptionset":
-                    MultiValueOptionSet multioptionsetField = new()
-                    {
-                        Name = fieldLogicalName,
-                    };
-                    XrmApp.Entity.GetValue(multioptionsetField).Values.Should().Equal(expectedValue);
-                    break;
-                case "lookup":
-                    LookupItem lookupField = new()
-                    {
-                        Name = fieldLogicalName,
-                    };
-                    actualValue = XrmApp.Entity.GetValue(lookupField);
-                    actualValue.Should().Be(expectedValue);
-                    break;
-                case "datetime":
-                    DateTimeControl datetimeField = new DateTimeControl(fieldLogicalName);
-                    System.DateTime? datetimeActualValue = XrmApp.Entity.GetValue(datetimeField);
-                    datetimeActualValue.Should().Be(DateTime.Parse(expectedValue, CultureInfo.CurrentCulture));
-                    break;
-                case "boolean":
-                    BooleanItem booleanField = new()
-                    {
-                        Name = fieldLogicalName,
-                    };
-                    bool booleanActualValue = XrmApp.Entity.GetValue(booleanField);
-                    booleanActualValue.Should().Be(bool.Parse(expectedValue));
-                    break;
-            }
-        }
-
-        private static void SetFieldValue(string fieldLogicalName, string fieldValue)
-        {
-            string fieldType = MetadataHelper.GetFieldTypeFromDomByLogicalName(fieldLogicalName);
-
-            switch (fieldType)
-            {
-                case "multioptionset":
-                    XrmApp.Dialogs.SetValue(
-                        new MultiValueOptionSet()
-                        {
-                            Name = fieldLogicalName,
-                            Values = fieldValue
-                                        .Split(',')
-                                        .Select(v => v.Trim())
-                                        .ToArray(),
-                        },
-                        true);
-                    break;
-                case "optionset":
-
-                    XrmApp.Dialogs.SetValue(new OptionSet()
-                    {
-                        Name = fieldLogicalName,
-                        Value = fieldValue,
-                    });
-                    break;
-                case "boolean":
-                    XrmApp.Dialogs.SetValue(new BooleanItem()
-                    {
-                        Name = fieldLogicalName,
-                        Value = bool.Parse(fieldValue),
-                    });
-                    break;
-                case "datetime":
-                    XrmApp.Dialogs.SetValue(new DateTimeControl(fieldLogicalName)
-                    {
-                        Value = DateTime.Parse(fieldValue, CultureInfo.CurrentCulture),
-                    });
-                    break;
-                case "lookup":
-                    XrmApp.Dialogs.SetValue(new LookupItem()
-                    {
-                        Name = fieldLogicalName,
-                        Value = fieldValue,
-                    });
-                    break;
-                case "currency":
-                case "numeric":
-                case "text":
-                    XrmApp.Dialogs.SetValue(fieldLogicalName, fieldValue);
-                    break;
-                default: throw new Exception(fieldType);
-            }
+            App.Dialogs.HasFieldValue(fieldLabel, expectedValue, out var actual)
+                .Should().BeTrue(because: $"the '{fieldLabel}' field on the dialog should show '{expectedValue}', not '{actual}'");
         }
     }
 }

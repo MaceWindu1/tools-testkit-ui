@@ -1,5 +1,3 @@
-/* eslint-disable class-methods-use-this */
-
 /**
  * Repository to handle requests for metadata.
  *
@@ -14,6 +12,20 @@ export default class MetadataRepository {
 
   private static readonly OneToNMetadataSet = 'RelationshipDefinitions/Microsoft.Dynamics.CRM.OneToManyRelationshipMetadata';
 
+  private readonly apiUrl: string;
+
+  private readonly headers: { [header: string]: string };
+
+  /**
+   * Creates an instance of MetadataRepository.
+   * @param apiUrl The Web API URL. Defaults to the Web API of the current page's origin.
+   * @param authToken An auth token, required when the Web API is on another origin.
+   */
+  constructor(apiUrl = 'api/data/v9.1/', authToken?: string) {
+    this.apiUrl = apiUrl;
+    this.headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  }
+
   /**
        * Gets the entity set for an entity.
        *
@@ -23,9 +35,8 @@ export default class MetadataRepository {
        */
   public async getEntitySetForEntity(logicalName: string): Promise<string> {
     const response = await fetch(
-      'api/data/v9.1/'
-            + `${MetadataRepository.EntityMetadataSet}?$filter=LogicalName eq '${logicalName}'&$select=EntitySetName`,
-      { cache: 'force-cache' },
+      `${this.apiUrl}${MetadataRepository.EntityMetadataSet}?$filter=LogicalName eq '${logicalName}'&$select=EntitySetName`,
+      { cache: 'force-cache', headers: this.headers },
     );
     const result = await response.json();
 
@@ -43,9 +54,8 @@ export default class MetadataRepository {
   public async getTargetsForLookupProperty(logicalName: string, navigationProperty: string)
     : Promise<string[] | null> {
     const response = await fetch(
-      'api/data/v9.1/'
-            + `${MetadataRepository.EntityMetadataSet}(LogicalName='${logicalName}')/Attributes/Microsoft.Dynamics.CRM.LookupAttributeMetadata?$filter=LogicalName eq '${navigationProperty.toLowerCase()}'&$select=Targets`,
-      { cache: 'force-cache' },
+      `${this.apiUrl}${MetadataRepository.EntityMetadataSet}(LogicalName='${logicalName}')/Attributes/Microsoft.Dynamics.CRM.LookupAttributeMetadata?$filter=LogicalName eq '${navigationProperty.toLowerCase()}'&$select=Targets`,
+      { cache: 'force-cache', headers: this.headers },
     );
     const result = await response.json();
 
@@ -61,9 +71,8 @@ export default class MetadataRepository {
        */
   public async getLookupPropertyForCollectionProperty(navPropName: string): Promise<string> {
     const response = await fetch(
-      'api/data/v9.1/'
-            + `${MetadataRepository.OneToNMetadataSet}?$filter=ReferencedEntityNavigationPropertyName eq '${navPropName}'&$select=ReferencingEntityNavigationPropertyName`,
-      { cache: 'force-cache' },
+      `${this.apiUrl}${MetadataRepository.OneToNMetadataSet}?$filter=ReferencedEntityNavigationPropertyName eq '${navPropName}'&$select=ReferencingEntityNavigationPropertyName`,
+      { cache: 'force-cache', headers: this.headers },
     );
     const result = await response.json();
 
@@ -78,9 +87,8 @@ export default class MetadataRepository {
   public async getRelationshipMetadata(relationshipSchemaName: string)
     : Promise<Xrm.Metadata.OneToNRelationshipMetadata | Xrm.Metadata.NToNRelationshipMetadata> {
     const response = await fetch(
-      'api/data/v9.1/'
-            + `${MetadataRepository.RelationshipMetadataSet}(SchemaName='${relationshipSchemaName}')`,
-      { cache: 'force-cache' },
+      `${this.apiUrl}${MetadataRepository.RelationshipMetadataSet}(SchemaName='${relationshipSchemaName}')`,
+      { cache: 'force-cache', headers: this.headers },
     );
 
     return response.json();

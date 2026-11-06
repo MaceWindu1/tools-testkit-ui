@@ -43,7 +43,9 @@ describe('DeepInsertService', () => {
     recordRepo = jasmine.createSpyObj<RecordRepository>('RecordRepository',
       [
         'deleteRecord',
+        'retrieveRecord',
         'upsertRecord',
+        'updateRecord',
         'associateManyToManyRecords',
       ]);
     metadataRepo = jasmine.createSpyObj<MetadataRepository>('MetadataRepository',
@@ -283,6 +285,66 @@ describe('DeepInsertService', () => {
         {});
 
       expect(recordRepo.upsertRecord.calls.first().args[0]).toBe('contact');
+    });
+
+    it('creates an inactive record active and then sets its state', async () => {
+      recordRepo.upsertRecord.and.resolveTo({ id: '<contact-id>', entityType: 'contact' });
+
+      await deepInsertService.deepInsert('contact', { lastname: 'Inactive', statecode: 1, statuscode: 2 }, {});
+
+      expect(recordRepo.upsertRecord.calls.first().args[1]).toEqual({ lastname: 'Inactive' });
+      expect(recordRepo.updateRecord)
+        .toHaveBeenCalledWith('contact', '<contact-id>', { statecode: 1, statuscode: 2 });
+    });
+
+    it('sets the state of an inactive record after creating its related records', async () => {
+      metadataRepo.getEntitySetForEntity.and.resolveTo('accounts');
+      metadataRepo.getRelationshipMetadata.and.resolveTo({ RelationshipType: 'OneToManyRelationship' } as Xrm.Metadata.OneToNRelationshipMetadata);
+      metadataRepo.getLookupPropertyForCollectionProperty.and.resolveTo('customerid_account');
+      recordRepo.upsertRecord.and.resolveTo({ id: '<account-id>', entityType: 'account' });
+      recordRepo.updateRecord.and.callFake(async () => {
+        expect(recordRepo.upsertRecord.calls.count()).toBe(2);
+        return { id: '<account-id>', entityType: 'account' };
+      });
+
+      await deepInsertService.deepInsert('account',
+        {
+          name: 'Inactive Account',
+          statecode: 1,
+          opportunity_customer_accounts: [{ name: 'Opportunity of the inactive account' }],
+        },
+        {});
+
+      expect(recordRepo.updateRecord).toHaveBeenCalledOnceWith('account', '<account-id>', { statecode: 1 });
+    });
+
+    it('creates an active record with its state', async () => {
+      recordRepo.upsertRecord.and.resolveTo({ id: '<contact-id>', entityType: 'contact' });
+      recordRepo.retrieveRecord.and.resolveTo({ statuscode: 1 });
+
+      await deepInsertService.deepInsert('contact', { lastname: 'Active', statecode: 0, statuscode: 1 }, {});
+
+      expect(recordRepo.upsertRecord.calls.first().args[1]).toEqual({ lastname: 'Active', statecode: 0, statuscode: 1 });
+      expect(recordRepo.updateRecord).not.toHaveBeenCalled();
+    });
+
+    it('sets the status reason of an active record again when the server changed it on create', async () => {
+      recordRepo.upsertRecord.and.resolveTo({ id: '<contract-id>', entityType: 'talxis_contract' });
+      recordRepo.retrieveRecord.and.resolveTo({ statuscode: 100000001 });
+
+      await deepInsertService.deepInsert('talxis_contract', { talxis_name: 'Active', statecode: 0, statuscode: 1 }, {});
+
+      expect(recordRepo.retrieveRecord).toHaveBeenCalledOnceWith('talxis_contract', '<contract-id>', '?$select=statuscode');
+      expect(recordRepo.updateRecord).toHaveBeenCalledOnceWith('talxis_contract', '<contract-id>', { statuscode: 1 });
+    });
+
+    it('does not read the status of a record created without a status reason', async () => {
+      recordRepo.upsertRecord.and.resolveTo({ id: '<contact-id>', entityType: 'contact' });
+
+      await deepInsertService.deepInsert('contact', { lastname: 'Default' }, {});
+
+      expect(recordRepo.retrieveRecord).not.toHaveBeenCalled();
+      expect(recordRepo.updateRecord).not.toHaveBeenCalled();
     });
 
     it('fallsback to @logicalName if targets are not found', async () => {

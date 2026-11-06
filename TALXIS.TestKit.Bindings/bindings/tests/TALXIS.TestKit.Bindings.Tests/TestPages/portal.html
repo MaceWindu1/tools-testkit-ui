@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>TALXIS Portal test page</title></head>
+<body>
+<!-- A static copy of the DOM the TALXIS Portal renders, for the portal extensions' tests. Scripts reproduce what the
+     portal does later (hiding a navigation item, loading inline commands, a group rendering its rows). -->
+<script>window.TALXIS = { Portal: {} }; window.Xrm = { WebApi: {}, Navigation: {} }; window.clicks = [];</script>
+
+<!-- Horizontal navigation (TabCommandBar items of the site map) -->
+<div class="ms-CommandBar TALXIS__tab-bar">
+  <button class="ms-Button ms-Button--commandBar" data-id="sitemap-entity-OverviewSubArea" title="Overview" data-selected-top-level="true"><span class="ms-Button-label">Overview</span></button>
+  <button class="ms-Button ms-Button--commandBar is-disabled" aria-disabled="true" data-id="sitemap-entity-DeliveriesSubArea" title="Contact your account manager to get access."><span class="ms-Button-label">Deliveries</span></button>
+  <button class="ms-Button ms-Button--commandBar" data-id="sitemap-entity-SettingsSubArea" id="late-hidden"><span class="ms-Button-label">Settings</span></button>
+  <button class="ms-Button ms-Button--commandBar" data-id="sitemap-entity-RequestsSubArea" title="Requests" onclick="clicks.push('nav:Requests')"><span class="ms-Button-label">Requests</span></button>
+</div>
+
+<!-- Form with tabs; a tab label starts with its Fluent icon glyph -->
+<section class="TALXIS__form">
+  <div class="ms-CommandBar TALXIS__tab-bar TALXIS__form__tab">
+    <button class="ms-Button ms-Button--commandBar" data-id="tablist-OverviewTab" data-selected="true" data-selected-top-level="true"><i data-icon-name="AutoRacing" aria-hidden="true"></i><span class="ms-Button-label"> Overview</span></button>
+    <button class="ms-Button ms-Button--commandBar" data-id="tablist-SigningTab" onclick="this.setAttribute('data-selected-top-level','true'); this.setAttribute('data-selected','true'); document.querySelector('[data-id=tablist-OverviewTab]').removeAttribute('data-selected-top-level'); document.querySelector('[data-id=tablist-OverviewTab]').removeAttribute('data-selected');"><i data-icon-name="People" aria-hidden="true"></i><span class="ms-Button-label"> Signing</span></button>
+    <!-- A tab whose page drops the first click (e.g. while another tab is still loading) -->
+    <button class="ms-Button ms-Button--commandBar" data-id="tablist-ChartsTab" onclick="if (!this.dataset.clicked) { this.dataset.clicked = 'once'; return; } document.querySelectorAll('[data-id^=tablist-]').forEach(function (t) { t.removeAttribute('data-selected-top-level'); t.removeAttribute('data-selected'); }); this.setAttribute('data-selected-top-level','true'); this.setAttribute('data-selected','true');"><i data-icon-name="BarChart4" aria-hidden="true"></i><span class="ms-Button-label"> Charts</span></button>
+  </div>
+
+  <div class="TALXIS__form__cell">
+    <label class="TALXIS__form__cell__label" title="Customer number">Customer number</label>
+    <div data-id="talxis_internalid.fieldControl_container"><span>C0001</span></div>
+  </div>
+
+  <!-- A cell hosting a nested form: the detail of the record selected in a subgrid -->
+  <div class="TALXIS__form__cell">
+    <section class="TALXIS__form">
+      <div class="TALXIS__form__cell">
+        <label class="TALXIS__form__cell__label" title="Operating unit">Operating unit</label>
+        <div data-id="talxis_securityteamid.fieldControl_container"><div class="talxis__lookupControl"><button data-entity="talxis_securityteam" title="North branch">North branch</button></div></div>
+      </div>
+      <div class="TALXIS__form__cell">
+        <label class="TALXIS__form__cell__label" title="Subject">Subject</label>
+        <div data-id="talxis_name.fieldControl_container"><input class="ms-TextField-field" value="Open request"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- An empty lookup showing records by their number: its first suggestions are still those of a shorter search -->
+  <div class="TALXIS__form__cell">
+    <label class="TALXIS__form__cell__label" title="Contract">Contract</label>
+    <div data-id="talxis_contractid.fieldControl_container"><div class="talxis__lookupControl"><input class="ms-BasePicker-input" oninput="suggestContracts(this)"></div></div>
+  </div>
+  <div class="TALXIS__tag-picker__suggestions" id="contract-suggestions"></div>
+  <script>
+    function suggestContracts(input) {
+      var suggestions = document.getElementById('contract-suggestions');
+      var show = function (numbers) {
+        suggestions.innerHTML = numbers.map(function (n) { return '<button role="option">' + n + '</button>'; }).join('');
+        suggestions.querySelectorAll('button').forEach(function (b) {
+          b.onclick = function () { input.parentNode.innerHTML = '<button data-entity="talxis_contract" title="' + b.textContent + '">' + b.textContent + '</button>'; suggestions.innerHTML = ''; };
+        });
+      };
+      show(['C-001', 'C-002']);
+      setTimeout(function () { show(['C-002']); }, 1000);
+    }
+  </script>
+
+  <!-- Grid subgrid (section > ribbon + dataSetRoot; ag-grid with a pinned selection column) -->
+  <section class="TALXIS__portal__view-page">
+    <div class="TALXIS__ribbon">
+      <div class="ms-CommandBar">
+        <button class="ms-Button" data-id="sample.invoice.subgrid.Export.Button" data-command="sample.invoice.subgrid.Export.Command" onclick="clicks.push('EXPORT')"><svg class="TALXIS__ribbon__icon__svg" data-src="/WebResources/ExportData.svg"></svg><span class="ms-Button-label">Export data</span></button>
+        <button class="ms-Button is-disabled" aria-disabled="true" data-id="busy.Button" data-command="busy.Command"><span class="ms-Button-label">BUSY</span></button>
+      </div>
+    </div>
+    <div data-id="dataSetRoot_InvoicesSubgrid">
+      <div class="InvoicesSubgrid">
+        <div class="ag-root-wrapper"><div class="ag-overlay ag-hidden" style="display:none"><div class="ag-overlay-panel"><div class="ag-overlay-wrapper ag-overlay-loading-wrapper"></div></div></div><div class="ag-root">
+          <div class="ag-header"><div class="ag-header-cell" col-id="talxis_name"><span>Invoice number</span></div></div>
+          <div class="ag-pinned-left-cols-container">
+            <div class="ag-row" row-id="11111111-1111-1111-1111-111111111111"><div class="ag-cell"><div class="sel"><div class="ms-Checkbox"><input type="checkbox"></div></div></div></div>
+            <div class="ag-row" row-id="22222222-2222-2222-2222-222222222222"><div class="ag-cell"><div class="sel"><div class="ms-Checkbox"><input type="checkbox"></div></div></div></div>
+          </div>
+          <div class="ag-center-cols-container">
+            <div class="ag-row ag-row-even" row-id="11111111-1111-1111-1111-111111111111"><div class="ag-cell" col-id="talxis_name">INV001</div><div class="ag-cell" col-id="sample_buttons__virtual"><button class="ms-Button ms-Button--commandBar ms-CommandBarItem-link" role="menuitem" title=""><span class="ms-Button-flexContainer"><i data-icon-name="ClipboardList" aria-hidden="true" class="ms-Icon ms-Button-icon">&#xF0E4;</i></span></button><button class="ms-Button" aria-label="Delete"><i data-icon-name="Delete"></i></button></div><div class="ag-cell" col-id="_talxis_gridRibbonButtons"><div class="ms-CommandBar"><button class="ms-Button" data-id="sample.invoice.subgrid.Pay.Button" data-command="sample.invoice.subgrid.Pay.Command" onclick="clicks.push('PAY')"><span class="ms-Button-label">PAY</span></button><button class="ms-Button" data-id="sample.invoice.subgrid.PDF.Button" data-command="sample.invoice.subgrid.PDF.Command" title="" onclick="clicks.push('PDF')"><i class="ms-Icon"><div class="ms-Image"><img class="ms-Image-image" src="https://portal.example/%7b000%7d/WebResources/talxis_downloaddocument.svg"></div></i></button></div></div></div>
+            <div class="ag-row ag-row-odd" row-id="22222222-2222-2222-2222-222222222222"><div class="ag-cell" col-id="talxis_name">INV002</div><div class="ag-cell" col-id="_talxis_gridRibbonButtons" id="row2-ribbon"><div class="ms-Shimmer-container"></div></div></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy view subgrid (Fluent DetailsList) in a nested form: no record ids; a row check per row -->
+  <section class="TALXIS__portal__view-page">
+    <div data-id="dataSetRoot_EquipmentGrid">
+      <div class="ms-DetailsList">
+        <div class="ms-DetailsHeader">
+          <div class="ms-DetailsHeader-cell" data-item-key="sample_materialid">Material</div>
+          <div class="ms-DetailsHeader-cell" data-item-key="sample_equipmentid">Equipment</div>
+          <div class="ms-DetailsHeader-cell" data-item-key="sample_quantity">Quantity</div>
+        </div>
+        <div class="ms-DetailsList-contentWrapper">
+          <div class="ms-DetailsRow" role="row" data-item-index="0" data-selection-index="0" aria-selected="false">
+            <div class="ms-DetailsRow-check" role="checkbox" aria-checked="false" style="display:inline-block;width:20px;height:20px" onclick="var r=this.closest('.ms-DetailsRow'); var on=r.getAttribute('aria-selected')!=='true'; r.setAttribute('aria-selected', on); this.setAttribute('aria-checked', on);"></div>
+            <div class="ms-DetailsRow-cell" data-automation-key="sample_materialid"><a title="Paper">Paper</a></div>
+            <div class="ms-DetailsRow-cell" data-automation-key="sample_equipmentid"><a title="Bin 120 l">Bin 120 l</a></div>
+            <div class="ms-DetailsRow-cell" data-automation-key="sample_quantity">2</div>
+            <div class="ms-DetailsRow-cell" data-automation-key="_talxis_gridRibbonButtons"><div class="ms-CommandBar TALXIS__ribbon"><button class="ms-Button" data-id="info.Button" data-command="info.Command"><img src="https://portal.example/WebResources/info.svg"></button></div></div>
+          </div>
+          <div class="ms-DetailsRow" role="row" data-item-index="1" data-selection-index="1" aria-selected="false">
+            <div class="ms-DetailsRow-check" role="checkbox" aria-checked="false" style="display:inline-block;width:20px;height:20px" onclick="var r=this.closest('.ms-DetailsRow'); var on=r.getAttribute('aria-selected')!=='true'; r.setAttribute('aria-selected', on); this.setAttribute('aria-checked', on);"></div>
+            <div class="ms-DetailsRow-cell" data-automation-key="sample_materialid"><a title="Paper">Paper</a></div>
+            <div class="ms-DetailsRow-cell" data-automation-key="sample_equipmentid"><a title="Container 1100 l">Container 1100 l</a></div>
+            <div class="ms-DetailsRow-cell" data-automation-key="sample_quantity">2</div>
+            <div class="ms-DetailsRow-cell" data-automation-key="_talxis_gridRibbonButtons"><div class="ms-CommandBar TALXIS__ribbon"><button class="ms-Button" data-id="other.Button" data-command="other.Command"><img src="https://portal.example/WebResources/other.svg"></button></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="TALXIS__view__footer">1 - 2 of 2</div>
+    </div>
+  </section>
+
+  <!-- Grouped legacy view without selection: collapsed groups, the grouped column shown only in the group header -->
+  <section class="TALXIS__portal__view-page">
+    <div data-id="dataSetRoot_StopsGrid">
+      <div class="ms-DetailsList">
+        <div class="ms-DetailsHeader">
+          <div class="ms-DetailsHeader-cell" data-item-key="talxis_addressid">Address</div>
+          <div class="ms-DetailsHeader-cell" data-item-key="sample_quantity">Quantity</div>
+        </div>
+        <div class="ms-DetailsList-contentWrapper"><div class="ms-GroupedList">
+          <div class="ms-GroupedList-group" role="presentation" data-command-icon="info.svg" data-first-index="0">
+            <div class="ms-GroupHeader" role="row" aria-expanded="false"><div class="ms-GroupHeader-groupHeaderContainer">
+              <button class="ms-GroupHeader-expand" aria-expanded="false" style="width:20px;height:20px" onclick="expandGroup(this)"></button>
+              <div class="ms-DetailsRow-fields"><div class="ms-DetailsRow-cell" data-automation-key="talxis_addressid"><div><span><a>1 Main Street</a></span></div></div><div class="ms-DetailsRow-cell" data-automation-key="sample_quantity">2</div></div>
+            </div></div>
+          </div>
+          <div class="ms-GroupedList-group" role="presentation" data-command-icon="other.svg" data-first-index="1">
+            <div class="ms-GroupHeader" role="row" aria-expanded="false"><div class="ms-GroupHeader-groupHeaderContainer">
+              <button class="ms-GroupHeader-expand" aria-expanded="false" style="width:20px;height:20px" onclick="expandGroup(this)"></button>
+              <div class="ms-DetailsRow-fields"><div class="ms-DetailsRow-cell" data-automation-key="talxis_addressid"><div><span><a>2 Main Street</a></span></div></div><div class="ms-DetailsRow-cell" data-automation-key="sample_quantity">1</div></div>
+            </div></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Aggregated legacy view: each group header stands for its records and shows their commands; the page hides the expander -->
+  <section class="TALXIS__portal__view-page">
+    <div data-id="dataSetRoot_AggregatedGrid">
+      <div class="ms-DetailsList">
+        <div class="ms-DetailsHeader">
+          <div class="ms-DetailsHeader-cell" data-item-key="sample_equipmentid">Equipment</div>
+          <div class="ms-DetailsHeader-cell" data-item-key="sample_quantity">Quantity</div>
+        </div>
+        <div class="ms-DetailsList-contentWrapper"><div class="ms-GroupedList">
+          <div class="ms-GroupedList-group" role="presentation">
+            <div class="ms-GroupHeader" role="row" aria-expanded="false"><div class="ms-GroupHeader-groupHeaderContainer">
+              <div role="gridcell" style="display:none"><button class="ms-GroupHeader-expand" aria-expanded="false"></button></div>
+              <div class="ms-DetailsRow-fields">
+                <div class="ms-DetailsRow-cell" data-automation-key="sample_equipmentid" style="display:inline-block;width:200px;height:20px"><div><a>Bin 120 l</a></div></div>
+                <div class="ms-DetailsRow-cell" data-automation-key="sample_quantity" style="display:inline-block;width:100px;height:20px"><div>2,00</div></div>
+                <div class="ms-DetailsRow-cell" data-automation-key="_talxis_gridRibbonButtons"><div class="ms-CommandBar TALXIS__ribbon"><button class="ms-Button" data-id="info.Button" data-command="info.Command"><img src="https://portal.example/WebResources/info.svg"></button></div></div>
+              </div>
+            </div></div>
+          </div>
+          <div class="ms-GroupedList-group" role="presentation">
+            <div class="ms-GroupHeader" role="row" aria-expanded="false"><div class="ms-GroupHeader-groupHeaderContainer">
+              <div role="gridcell" style="display:none"><button class="ms-GroupHeader-expand" aria-expanded="false"></button></div>
+              <div class="ms-DetailsRow-fields">
+                <div class="ms-DetailsRow-cell" data-automation-key="sample_equipmentid" style="display:inline-block;width:200px;height:20px"><div><a>Container 1100 l</a></div></div>
+                <div class="ms-DetailsRow-cell" data-automation-key="sample_quantity" style="display:inline-block;width:100px;height:20px"><div>1,00</div></div>
+                <div class="ms-DetailsRow-cell" data-automation-key="_talxis_gridRibbonButtons"><div class="ms-CommandBar TALXIS__ribbon"><button class="ms-Button" data-id="other.Button" data-command="other.Command"><img src="https://portal.example/WebResources/other.svg"></button></div></div>
+              </div>
+            </div></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Grid without record selection: each row shows its own commands; a click on a row opens its record -->
+  <section class="TALXIS__portal__view-page">
+    <div class="TALXIS__ribbon"><div class="ms-CommandBar"></div></div>
+    <div data-id="dataSetRoot_PrepaymentsGrid"><div class="ag-root-wrapper"><div class="ag-root">
+      <div class="ag-center-cols-container" onclick="if (!event.target.closest('button')) clicks.push('OPEN')">
+        <div class="ag-row" row-id="44444444-4444-4444-4444-444444444444"><div class="ag-cell" col-id="talxis_name">PRE1</div><div class="ag-cell" col-id="_talxis_gridRibbonButtons"><div class="ms-CommandBar"><button class="ms-Button" data-id="pay" data-command="pay"><span class="ms-Button-label">PAY</span></button></div></div></div>
+        <div class="ag-row" row-id="55555555-5555-5555-5555-555555555555"><div class="ag-cell" col-id="talxis_name">PRE2</div><div class="ag-cell" col-id="_talxis_gridRibbonButtons"><div class="ms-CommandBar"><button class="ms-Button" data-id="paid" data-command="paid"><span class="ms-Button-label">PAID</span></button></div></div></div>
+      </div>
+    </div></div></div>
+  </section>
+</section>
+
+<script>
+  // The portal re-renders the tab bar while a page loads: its buttons are replaced (with their state) every few
+  // milliseconds for a while.
+  function rerenderTabsFor(milliseconds) {
+    var bar = document.querySelector('.TALXIS__form__tab');
+    var end = Date.now() + milliseconds;
+    var timer = setInterval(function () {
+      bar.innerHTML = bar.innerHTML;
+      if (Date.now() > end) clearInterval(timer);
+    }, 2);
+  }
+
+  // SelectionCell: the checkbox container toggles the selection; Fluent Checkbox shows it with is-checked, and ag-grid
+  // marks the record's rows with ag-row-selected.
+  document.querySelectorAll('.sel').forEach(function (container) {
+    container.addEventListener('click', function () {
+      var checkbox = container.querySelector('.ms-Checkbox');
+      checkbox.classList.toggle('is-checked');
+      container.querySelector('input').checked = checkbox.classList.contains('is-checked');
+      var id = container.closest('.ag-row').getAttribute('row-id');
+      document.querySelectorAll('.ag-row[row-id="' + id + '"]').forEach(function (r) { r.classList.toggle('ag-row-selected'); });
+    });
+  });
+  // A navigation item that a script hides after the page loads.
+  setTimeout(function () { document.getElementById('late-hidden').remove(); }, 4000);
+  // The inline commands of the second invoice finish loading late.
+  setTimeout(function () {
+    document.getElementById('row2-ribbon').innerHTML = '<div class="ms-CommandBar"><button class="ms-Button" data-id="sample.invoice.subgrid.Paid.Button" data-command="sample.invoice.subgrid.Paid.Command"><span class="ms-Button-label">PAID</span></button></div>';
+  }, 2500);
+  // A command that appears asynchronously, as after the ribbon re-evaluates its rules.
+  setTimeout(function () {
+    var bar = document.querySelector('.TALXIS__ribbon .ms-CommandBar');
+    bar.insertAdjacentHTML('beforeend', '<button class="ms-Button" data-id="late.Button" data-command="late.Command"><span class="ms-Button-label">LATER</span></button>');
+  }, 1500);
+  // A collapsed group renders its rows (the grouped column empty) a moment after it is expanded.
+  function expandGroup(button) {
+    var group = button.closest('.ms-GroupedList-group');
+    button.setAttribute('aria-expanded', 'true');
+    group.querySelector('.ms-GroupHeader').setAttribute('aria-expanded', 'true');
+    setTimeout(function () {
+      group.insertAdjacentHTML('beforeend', '<div class="ms-List" role="rowgroup"><div class="ms-List-cell"><div class="ms-DetailsRow" role="row" data-item-index="' + group.dataset.firstIndex + '">' +
+        '<div class="ms-DetailsRow-cell" data-automation-key="talxis_addressid" style="display:inline-block;width:100px;height:20px"><div></div></div>' +
+        '<div class="ms-DetailsRow-cell" data-automation-key="sample_quantity" style="display:inline-block;width:100px;height:20px">2</div>' +
+        '<div class="ms-DetailsRow-cell" data-automation-key="_talxis_gridRibbonButtons"><div class="ms-CommandBar TALXIS__ribbon"><button class="ms-Button" data-id="info.Button" data-command="info.Command"><img src="https://portal.example/WebResources/' + group.dataset.commandIcon + '"></button></div></div>' +
+        '</div></div></div>');
+    }, 500);
+  }
+
+  // A form dialog (FormDialog: a blocking Fluent Dialog, role alertdialog) with a three-step wizard.
+  function showFormDialog() {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="ms-Layer"><div role="alertdialog" class="ms-Dialog TALXIS__dialog--form"><div class="ms-Dialog-main">' +
+      '<div class="ms-Dialog-header"><div class="ms-Dialog-title">Annual report</div><button class="ms-Button ms-Dialog-button--close" aria-label="Close" onclick="this.closest(\'.ms-Layer\').remove()"></button></div>' +
+      '<div class="ms-Dialog-content"><section class="TALXIS__form"><div class="TALXIS__form__tab-content" id="wizard-step">Step 1</div></section>' +
+      '<div class="ms-Dialog-actions"><div class="ms-Dialog-actionsRight">' +
+      '<button class="ms-Button ms-Button--primary" id="continue" onclick="var s=document.getElementById(\'wizard-step\'); var n=parseInt(s.textContent.split(\' \')[1])+1; s.textContent=\'Step \'+n; if(n>=3){this.remove(); document.getElementById(\'finish\').style.display=\'\';}"><span class="ms-Button-label">Continue</span></button>' +
+      '<button class="ms-Button ms-Button--primary" id="finish" style="display:none"><span class="ms-Button-label">Finish</span></button>' +
+      '</div></div></div></div></div></div>');
+  }
+
+  // A confirmation dialog (ConfirmationDialog: primary = confirm, default = cancel).
+  function showConfirmationDialog() {
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="ms-Layer"><div role="alertdialog" class="ms-Dialog"><div class="ms-Dialog-main">' +
+      '<div class="ms-Dialog-header"><div class="ms-Dialog-title"><span class="ms-Text">Do you want to activate this record?</span></div></div>' +
+      '<div class="ms-Dialog-content"><span class="TALXIS-Portal-confirmationDialog-text">A request will be sent.</span>' +
+      '<div class="ms-Dialog-actions">' +
+      '<button class="ms-Button ms-Button--primary" onclick="clicks.push(\'confirm\'); this.closest(\'.ms-Layer\').remove()"><span class="ms-Button-label">OK</span></button>' +
+      '<button class="ms-Button ms-Button--default" onclick="clicks.push(\'cancel\'); this.closest(\'.ms-Layer\').remove()"><span class="ms-Button-label">Cancel</span></button>' +
+      '</div></div></div></div></div>');
+  }
+</script>
+</body>
+</html>

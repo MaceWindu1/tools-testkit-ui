@@ -35,7 +35,7 @@
             string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
             string fieldType = MetadataHelper.GetFieldTypeFromDomByLogicalName(fieldLogicalName);
 
-            SetFieldValue(fieldLogicalName, fieldValue.ReplaceTemplatedText(), fieldType);
+            SetFieldValue(fieldLogicalName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), fieldType);
 
             // Click to lose focus - So that business rules and other form events can occur
             Driver.FindElement(By.XPath("html")).Click();

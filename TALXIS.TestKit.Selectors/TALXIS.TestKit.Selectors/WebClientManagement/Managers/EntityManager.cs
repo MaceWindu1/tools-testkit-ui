@@ -1938,6 +1938,207 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             return result.Value;
         }
 
+        internal string GetFieldLogicalNameFromLabel(string label) =>
+            Client.Execute(Client.GetNoRetryOptions($"Get Field Logical Name From Label: {label}"), driver => GetFieldLogicalNameFromLabel(driver, label)).Value;
+
+        internal string ResolveFieldLogicalName(string field) =>
+            Client.Execute(Client.GetNoRetryOptions($"Resolve Field Logical Name: {field}"), driver => ResolveFieldLogicalName(driver, field)).Value;
+
+        internal bool IsFieldVisible(string fieldLogicalName) =>
+            Client.Execute(Client.GetNoRetryOptions($"Is Field Visible: {fieldLogicalName}"), driver => IsFieldVisible(driver, fieldLogicalName)).Value;
+
+        internal bool IsFieldReadOnly(string fieldLogicalName) =>
+            Client.Execute(Client.GetNoRetryOptions($"Is Field Read-Only: {fieldLogicalName}"), driver => IsFieldReadOnly(driver, fieldLogicalName)).Value;
+
+        internal bool IsFieldEmpty(string fieldLogicalName) =>
+            Client.Execute(Client.GetNoRetryOptions($"Is Field Empty: {fieldLogicalName}"), driver => IsFieldEmpty(driver, fieldLogicalName)).Value;
+
+        internal string GetFieldType(string fieldLogicalName) =>
+            Client.Execute(Client.GetNoRetryOptions($"Get Field Type: {fieldLogicalName}"), driver => GetFieldType(driver, fieldLogicalName)).Value;
+
+        internal string GetFieldLocation(string fieldLogicalName) =>
+            Client.Execute(Client.GetNoRetryOptions($"Get Field Location: {fieldLogicalName}"), driver => GetFieldLocation(driver, fieldLogicalName)).Value;
+
+        internal int GetSubGridRecordIndexById(string subGridName, Guid recordId) =>
+            Client.Execute(Client.GetNoRetryOptions($"Get Subgrid Record Index: {subGridName}"), driver => GetSubGridRecordIndexById(driver, subGridName, recordId)).Value;
+
+        internal bool HighlightSubGridRecord(string subGridName, int index) =>
+            Client.Execute(Client.GetNoRetryOptions($"Highlight Subgrid Record: {subGridName}"), driver => HighlightSubGridRecord(driver, subGridName, index)).Value;
+
+        internal long GetSubGridTotalRecordCount(string subGridName) =>
+            Client.Execute(Client.GetNoRetryOptions($"Get Subgrid Total Record Count: {subGridName}"), driver => GetSubGridTotalRecordCount(driver, subGridName)).Value;
+
+        internal bool WaitForSubGridCommandBar(string subGridName)
+        {
+            return Client.Execute(Client.GetNoRetryOptions($"Wait For Subgrid Command Bar: {subGridName}"), driver =>
+            {
+                // The command bar is only rendered once the subgrid's ribbon has loaded.
+                driver
+                    .WaitUntilAvailable(EntityElementsLocators.SubGridContents(subGridName), $"Could not find the {subGridName} subgrid.")
+                    .WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandBar]), $"Could not find the command bar of the {subGridName} subgrid.");
+                return true;
+            }).Value;
+        }
+
+        /// <summary>
+        /// Gets the logical name of a field from the label the form shows.
+        /// </summary>
+        internal static string GetFieldLogicalNameFromLabel(IWebDriver driver, string label)
+        {
+            return driver.FindElement(EntityElementsLocators.FieldLabelContainer(label)).GetAttribute("data-id");
+        }
+
+        /// <summary>
+        /// Gets the logical name of a field from its logical name or its label. Unlike <see cref="GetFieldLogicalNameFromLabel(IWebDriver, string)"/>,
+        /// which reads the labels shown, it reads the form's controls, so it also finds hidden fields. A name that matches
+        /// neither is returned unchanged.
+        /// </summary>
+        internal static string ResolveFieldLogicalName(IWebDriver driver, string field)
+        {
+            return (string)((IJavaScriptExecutor)driver).ExecuteScript(
+                @"var field = arguments[0];
+                  if (Xrm.Page.getAttribute(field)) { return field; }
+                  var labelled = Xrm.Page.ui.controls.get(function (control) {
+                      return typeof control.getLabel === 'function' && control.getLabel() === field
+                          && typeof control.getAttribute === 'function' && control.getAttribute();
+                  });
+                  return labelled.length > 0 ? labelled[0].getAttribute().getName() : field;",
+                field);
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether a field is shown on the form: a hidden field renders no container.
+        /// </summary>
+        internal static bool IsFieldVisible(IWebDriver driver, string fieldLogicalName)
+        {
+            return driver.FindElements(EntityElementsLocators.FieldContainer(fieldLogicalName)).Count > 0;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether a shown field is read-only (shows a lock icon); Field.IsReadOnly does not work.
+        /// </summary>
+        internal static bool IsFieldReadOnly(IWebDriver driver, string fieldLogicalName)
+        {
+            return driver.FindElements(EntityElementsLocators.FieldLockedIcon(fieldLogicalName)).Count > 0;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether a field on the form has no value, whether it is shown or hidden.
+        /// </summary>
+        internal static bool IsFieldEmpty(IWebDriver driver, string fieldLogicalName)
+        {
+            var empty = ((IJavaScriptExecutor)driver).ExecuteScript(
+                @"var attribute = Xrm.Page.getAttribute(arguments[0]);
+                  if (!attribute) { return null; }
+                  var value = attribute.getValue();
+                  return value === null || value === '' || (Array.isArray(value) && value.length === 0);",
+                fieldLogicalName);
+
+            return empty as bool? ?? throw new InvalidOperationException($"The form has no '{fieldLogicalName}' field.");
+        }
+
+        /// <summary>
+        /// Gets the type of a field as the field steps tell them apart: boolean, datetime, lookup, optionset, multioptionset
+        /// or text ('attribute not found' when the form has no such field).
+        /// </summary>
+        internal static string GetFieldType(IWebDriver driver, string fieldLogicalName)
+        {
+            try
+            {
+                return ((IJavaScriptExecutor)driver).ExecuteScript(
+                    @"var attribute = Xrm.Page.getAttribute(arguments[0]);
+                      if (!attribute) return 'attribute not found';
+                      switch (attribute.getAttributeType()) {
+                          case 'boolean': return 'boolean';
+                          case 'datetime': return 'datetime';
+                          case 'lookup': return 'lookup';
+                          case 'optionset': return 'optionset';
+                          case 'multiselectoptionset': return 'multioptionset';
+                          default: return 'text';
+                      }",
+                    fieldLogicalName).ToString();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error when retrieving field type '{fieldLogicalName}': {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Gets where a field is on the form: 'field' in the body, 'header' in the header ('control not found' when the form
+        /// has no such control).
+        /// </summary>
+        internal static string GetFieldLocation(IWebDriver driver, string fieldLogicalName)
+        {
+            try
+            {
+                return ((IJavaScriptExecutor)driver).ExecuteScript(
+                    @"var control = Xrm.Page.getControl(arguments[0]);
+                      if (!control) return 'control not found';
+                      var header = Xrm.Page.ui.tabs.get('header_section');
+                      return header && header.controls.get(arguments[0]) ? 'header' : 'field';",
+                    fieldLogicalName).ToString();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error when retrieving field location '{fieldLogicalName}': {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Gets the index of a record in a subgrid by its id (EasyRepro's grid item ids are broken, see
+        /// https://github.com/microsoft/EasyRepro/issues/800).
+        /// </summary>
+        /// <returns>The index, or -1 when the subgrid does not show the record.</returns>
+        internal static int GetSubGridRecordIndexById(IWebDriver driver, string subGridName, Guid recordId)
+        {
+            driver.WaitUntilAvailable(EntityElementsLocators.SubGridContents(subGridName));
+
+            var index = (long)((IJavaScriptExecutor)driver).ExecuteScript(
+                "return Xrm.Page.getControl(arguments[0]).getGrid().getRows().get().findIndex(row => row.getData().getEntity().getId() == arguments[1]);",
+                subGridName,
+                recordId.ToString("B").ToUpperInvariant());
+
+            return Convert.ToInt32(index);
+        }
+
+        /// <summary>
+        /// Selects the record at an index of a subgrid by clicking its first cell.
+        /// </summary>
+        internal static bool HighlightSubGridRecord(IWebDriver driver, string subGridName, int index)
+        {
+            var rows = driver.FindElement(EntityElementsLocators.SubGridContents(subGridName)).FindElements(EntityElementsLocators.SubGridRows);
+
+            if (rows.Count == 0)
+                throw new NoSuchElementException($"No records were found for subgrid {subGridName}");
+
+            if (index + 1 > rows.Count)
+                throw new IndexOutOfRangeException($"Subgrid {subGridName} record count: {rows.Count}. Expected: {index + 1}");
+
+            rows[index].FindElements(EntityElementsLocators.SubGridCells)[0].Click();
+            driver.WaitForTransaction();
+            return true;
+        }
+
+        /// <summary>
+        /// Counts all records of a subgrid; GetSubGridItemsCount fails for a count of 0
+        /// (https://github.com/microsoft/EasyRepro/issues/1318).
+        /// </summary>
+        internal static long GetSubGridTotalRecordCount(IWebDriver driver, string subGridName)
+        {
+            return (long)((IJavaScriptExecutor)driver).ExecuteScript("return Xrm.Page.getControl(arguments[0]).getGrid().getTotalRecordCount();", subGridName);
+        }
+
+        internal bool? IsSubgridCommandEnabled(string commandName, string subGridName)
+        {
+            var label = TryToFindAssertSubgridCommand(commandName, subGridName);
+            if (label == null)
+                return null;
+
+            var command = label.FindElement(EntityElementsLocators.SubGridCommandButtonOfLabel);
+            return command.GetAttribute("aria-disabled") != "true" && string.IsNullOrEmpty(command.GetAttribute("disabled"));
+        }
+
         /// <summary>
         /// Gets the flyout container element.
         /// </summary>

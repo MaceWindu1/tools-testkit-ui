@@ -26,7 +26,7 @@ namespace TALXIS.TestKit.Selectors.Browser
             switch (options.BrowserType)
             {
                 case BrowserType.Chrome:
-                    driverManager.SetUpDriver(new ChromeConfig(), VersionResolveStrategy.Latest);
+                    driverManager.SetUpDriver(new ChromeConfig(), VersionResolveStrategy.MatchingBrowser);
                     var chromeService = ChromeDriverService.CreateDefaultService();
                     chromeService.HideCommandPromptWindow = options.HideDiagnosticWindow;
                     driver = new ChromeDriver(chromeService, options.ToChrome(), options.CommandTimeout);

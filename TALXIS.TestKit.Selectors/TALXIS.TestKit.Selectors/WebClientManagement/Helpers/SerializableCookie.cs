@@ -1,7 +1,7 @@
 ﻿using System;
 using OpenQA.Selenium;
 
-namespace TALXIS.TestKit.Bindings.Extensions.CookiesManagement
+namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
 {
     class SerializableCookie
     {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OpenQA.Selenium;
+using TALXIS.TestKit.Selectors.Browser;
 
 namespace TALXIS.TestKit.Selectors.DTO.Locators
 {
@@ -26,6 +27,10 @@ namespace TALXIS.TestKit.Selectors.DTO.Locators
         internal static By AssignDialogOKButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.AssignDialogOKButton]);
         internal static By AssignDialogToggle => By.XPath(AppElements.Xpath[AppReference.Dialogs.AssignDialogToggle]);
         internal static By ConfirmButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.ConfirmButton]);
+        internal static By Displayed => By.XPath(AppElements.Xpath[AppReference.Dialogs.Displayed]);
+        internal static By ButtonByLabel(string label) => By.XPath(AppElements.Xpath[AppReference.Dialogs.ButtonByLabel].Replace("[LABEL]", label.ToXPathLiteral()));
+        internal static By CloseButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.CloseButton]);
+        internal static By Text(string text) => By.XPath(AppElements.Xpath[AppReference.Dialogs.Text].Replace("[LABEL]", text.ToXPathLiteral()));
         internal static By CancelButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.CancelButton]);
         internal static By OkButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.OkButton]);
         internal static By DuplicateDetectionIgnoreSaveButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.DuplicateDetectionIgnoreSaveButton]);

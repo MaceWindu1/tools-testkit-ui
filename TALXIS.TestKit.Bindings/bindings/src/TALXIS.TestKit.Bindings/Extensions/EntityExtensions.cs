@@ -18,11 +18,9 @@
         /// <returns>Whether the field is visible.</returns>
         public static bool IsFieldVisible(this Entity entity, IWebDriver driver, string fieldName)
         {
-            driver = driver ?? throw new ArgumentNullException(nameof(driver));
+            entity = entity ?? throw new ArgumentNullException(nameof(entity));
 
-            var elements = driver.FindElements(By.CssSelector($"div[data-id={fieldName}]"));
-
-            return elements.Count > 0;
+            return entity.IsFieldVisible(fieldName);
         }
 
         /// <summary>
@@ -34,12 +32,9 @@
         /// <returns>Logical name of the field.</returns>
         public static string GetFieldLogicalNameFromLabel(this Entity entity, IWebDriver driver, string fieldLabel)
         {
-            driver = driver ?? throw new ArgumentNullException(nameof(driver));
+            entity = entity ?? throw new ArgumentNullException(nameof(entity));
 
-            var labelElement = driver.FindElement(By.XPath($"//label[text()='{fieldLabel}']/ancestor-or-self::div[@data-preview_orientation='row'][1]"));
-            string logicalName = labelElement.GetAttribute("data-id");
-
-            return logicalName;
+            return entity.GetFieldLogicalNameFromLabel(fieldLabel);
         }
 
         /// <summary>

@@ -69,6 +69,13 @@ export default class DeepInsertService {
     const collRecordsByNavProp = DeepInsertService.getOneToManyRecords(recordToCreate);
     Object.keys(collRecordsByNavProp).forEach((collNavProp) => delete recordToCreate[collNavProp]);
 
+    // Dataverse creates records active: an inactive state is set once the record and its related
+    // records exist.
+    const inactiveState = DeepInsertService.getInactiveState(recordToCreate);
+    if (inactiveState) {
+      Object.keys(inactiveState).forEach((attribute) => delete recordToCreate[attribute]);
+    }
+
     const recordToCreateRef = await repo.upsertRecord(logicalName, recordToCreate);
 
     if (Object.keys(record).includes('@bpf')) {
@@ -81,6 +88,14 @@ export default class DeepInsertService {
       );
       associatedRecords.push(...result);
     }));
+
+    if (inactiveState) {
+      await repo.updateRecord(logicalName, recordToCreateRef.id, inactiveState);
+    } else if (recordToCreate.statuscode !== undefined) {
+      await DeepInsertService.keepStatusReason(
+        repo, logicalName, recordToCreateRef.id, recordToCreate.statuscode as number,
+      );
+    }
 
     return {
       associatedRecords,
@@ -99,6 +114,33 @@ export default class DeepInsertService {
         prev[curr] = record[curr] as Record[];
         return prev;
       }, {} as { [navigationProperty: string]: Record[] });
+  }
+
+  // The state of a record that is not active (statecode other than 0), with its status reason
+  // when given.
+  private static getInactiveState(record: Record): Record | undefined {
+    if (record.statecode === undefined || record.statecode === 0) {
+      return undefined;
+    }
+
+    return record.statuscode === undefined
+      ? { statecode: record.statecode }
+      : { statecode: record.statecode, statuscode: record.statuscode };
+  }
+
+  // Plugins and process flows can give a record they create another status (e.g. a contract starts
+  // as a draft): the status reason the data gives an active record is then set again, as the
+  // record's later updates would set it.
+  private static async keepStatusReason(
+    repo: RecordRepository,
+    logicalName: string,
+    id: string,
+    statuscode: number,
+  ): Promise<void> {
+    const created = await repo.retrieveRecord(logicalName, id, '?$select=statuscode');
+    if (created?.statuscode !== statuscode) {
+      await repo.updateRecord(logicalName, id, { statuscode });
+    }
   }
 
   private static getOneToManyRecords(record: Record)

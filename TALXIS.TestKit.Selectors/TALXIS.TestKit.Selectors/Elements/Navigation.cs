@@ -56,6 +56,15 @@ namespace TALXIS.TestKit.Selectors
             return _navigationManager.GetGroupText(groupName);
         }
 
+        /// <summary>
+        /// Gets a value indicating whether a subarea is shown in the sitemap, without waiting for it.
+        /// </summary>
+        /// <param name="subArea">The subarea's title.</param>
+        public bool IsSubAreaVisible(string subArea)
+        {
+            return _navigationManager.IsSubAreaVisible(subArea);
+        }
+
         public IWebElement GetSubAreaElement(string subArea)
         {
             return _navigationManager.GetSubAreaElement(subArea);

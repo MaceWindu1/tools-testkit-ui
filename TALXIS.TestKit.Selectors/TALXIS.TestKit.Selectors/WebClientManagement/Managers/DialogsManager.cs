@@ -225,6 +225,54 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
             });
         }
 
+        internal bool IsButtonVisible(string label)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions($"Is Dialog Button Visible: {label}"), driver =>
+            {
+                var dialog = GetDisplayedDialog(driver) ?? throw new NoSuchElementException("No dialog is displayed.");
+                return dialog.FindElements(DialogsElementsLocators.ButtonByLabel(label)).Count > 0;
+            });
+        }
+
+        internal bool TryClickButton(string label)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions($"Try Click Dialog Button: {label}"), driver =>
+            {
+                // The last click of a wizard may have closed the dialog.
+                var dialog = GetDisplayedDialog(driver);
+                var button = dialog?.FindElements(DialogsElementsLocators.ButtonByLabel(label)).FirstOrDefault();
+                if (button == null)
+                    return false;
+
+                button.Click();
+                driver.WaitForTransaction();
+                return true;
+            });
+        }
+
+        internal bool CloseDialog()
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions("Close Dialog"), driver =>
+            {
+                (GetDisplayedDialog(driver) ?? throw new NoSuchElementException("No dialog is displayed."))
+                    .FindElement(DialogsElementsLocators.CloseButton).Click();
+                driver.WaitForTransaction();
+                return true;
+            });
+        }
+
+        internal bool IsTextVisible(string text)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions("Is Text Visible On Dialog"), driver =>
+                GetDisplayedDialog(driver)?.FindElements(DialogsElementsLocators.Text(text)).Any(element => element.Displayed) == true);
+        }
+
+        // The topmost displayed dialog: a dialog opened from another one comes later in the page.
+        private static IWebElement GetDisplayedDialog(IWebDriver driver)
+        {
+            return driver.FindElements(DialogsElementsLocators.Displayed).LastOrDefault(dialog => dialog.Displayed);
+        }
+
         internal string GetCurrentDialogLable()
         {
             return Client.Execute<string>(Client.GetOptions("Get Current Dialog Lable"), driver =>

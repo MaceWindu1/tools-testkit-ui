@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using OpenQA.Selenium;
+using TALXIS.TestKit.Selectors.Browser;
 
 namespace TALXIS.TestKit.Selectors.DTO.Locators
 {
@@ -55,6 +56,10 @@ namespace TALXIS.TestKit.Selectors.DTO.Locators
         internal static By SubGridRow(string name, string index) => By.XPath(AppElements.Xpath[AppReference.Entity.SubGridRow].Replace("[NAME]", name).Replace("[INDEX]", index));
         internal static By SubGrid_LastRow => By.XPath(AppElements.Xpath[AppReference.Entity.SubGridLastRow]);
         internal static By SubGridContents(string name) => By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", name));
+        internal static By SubGridCommandButtonOfLabel => By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandButtonOfLabel]);
+        internal static By FieldContainer(string name) => By.XPath(AppElements.Xpath[AppReference.Entity.FieldContainer].Replace("[NAME]", name.ToXPathLiteral()));
+        internal static By FieldLockedIcon(string name) => FieldContainer(name + "-locked-iconWrapper");
+        internal static By FieldLabelContainer(string label) => By.XPath(AppElements.Xpath[AppReference.Entity.FieldLabelContainer].Replace("[LABEL]", label.ToXPathLiteral()));
         internal static By SubGridList(string name) => By.XPath(AppElements.Xpath[AppReference.Entity.SubGridList].Replace("[NAME]", name));
         internal static By SubGridListCells(string name) => By.XPath(AppElements.Xpath[AppReference.Entity.SubGridListCells].Replace("[NAME]", name));
         internal static By SubGridViewPickerButton => By.XPath(AppElements.Xpath[AppReference.Entity.SubGridViewPickerButton]);

@@ -42,6 +42,49 @@ namespace TALXIS.TestKit.Selectors
             _timelineManager.Assign(userOrTeam);
         }
 
+        /// <summary>
+        /// Gets the logical name of a field from the label the form shows.
+        /// </summary>
+        /// <param name="label">The field's label.</param>
+        public string GetFieldLogicalNameFromLabel(string label) => _entityManager.GetFieldLogicalNameFromLabel(label);
+
+        /// <summary>
+        /// Gets the logical name of a field from its logical name or its label, through the form's controls, so that also a
+        /// hidden field is found by its label. A name that matches neither is returned unchanged.
+        /// </summary>
+        /// <param name="field">The field's logical name or label.</param>
+        public string ResolveFieldLogicalName(string field) => _entityManager.ResolveFieldLogicalName(field);
+
+        /// <summary>
+        /// Gets a value indicating whether a field is shown on the form, without waiting for it.
+        /// </summary>
+        /// <param name="fieldLogicalName">The field's logical name.</param>
+        public bool IsFieldVisible(string fieldLogicalName) => _entityManager.IsFieldVisible(fieldLogicalName);
+
+        /// <summary>
+        /// Gets a value indicating whether a shown field is read-only.
+        /// </summary>
+        /// <param name="fieldLogicalName">The field's logical name.</param>
+        public bool IsFieldReadOnly(string fieldLogicalName) => _entityManager.IsFieldReadOnly(fieldLogicalName);
+
+        /// <summary>
+        /// Gets a value indicating whether a field has no value, whether it is shown or hidden.
+        /// </summary>
+        /// <param name="fieldLogicalName">The field's logical name.</param>
+        public bool IsFieldEmpty(string fieldLogicalName) => _entityManager.IsFieldEmpty(fieldLogicalName);
+
+        /// <summary>
+        /// Gets the type of a field: boolean, datetime, lookup, optionset, multioptionset or text.
+        /// </summary>
+        /// <param name="fieldLogicalName">The field's logical name.</param>
+        public string GetFieldType(string fieldLogicalName) => _entityManager.GetFieldType(fieldLogicalName);
+
+        /// <summary>
+        /// Gets where a field is on the form: 'field' in the body or 'header' in the header.
+        /// </summary>
+        /// <param name="fieldLogicalName">The field's logical name.</param>
+        public string GetFieldLocation(string fieldLogicalName) => _entityManager.GetFieldLocation(fieldLogicalName);
+
         public TAttributeType GetFieldSectionItemContainertAttribute<TAttributeType>(string fieldName, string attributeName)
         {
             var fieldContainer = _entityManager.GetFieldSectionItemContainer(fieldName);

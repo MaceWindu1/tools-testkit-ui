@@ -574,7 +574,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 
                 // Retrieve all sitemap groups.
                 var groups = driver.FindElements(By.XPath(AppElements.Xpath[AppReference.Navigation.SitemapMenuGroup]));
-                var groupList = groups.FirstOrDefault(g => g.GetAttribute("aria-label").ToLowerString() == groupName.ToLowerString());
+                var groupList = groups.FirstOrDefault(g => GetGroupName(driver, g).ToLowerString() == groupName.ToLowerString());
                 if (groupList == null)
                 {
                     throw new NotFoundException($"No group with the name '{groupName}' exists");
@@ -615,15 +615,36 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             }).Value;
         }
 
+        internal bool IsSubAreaVisible(string subArea)
+        {
+            return Client.Execute<bool>(Client.GetNoRetryOptions("Is SubArea Visible"), driver =>
+                driver.FindElements(By.XPath(AppElements.Xpath[AppReference.Navigation.SubAreaImage].Replace("[LABEL]", subArea.ToXPathLiteral()))).Count > 0);
+        }
+
         internal string GetGroupText(string groupName)
         {
             return Client.Execute<string>(Client.GetOptions("Get Group Text"), driver =>
             {
                 var groupNameWithoutWhitespace = groupName?.Replace(" ", string.Empty);
-                var locator = By.XPath($"//h3[@data-id='sitemap-sitemapAreaGroup-{groupNameWithoutWhitespace}']");
+                // An h3 in older versions of the unified interface, a span in newer ones.
+                var locator = By.XPath($"//*[@data-id='sitemap-sitemapAreaGroup-{groupNameWithoutWhitespace}']");
 
                 return driver.WaitUntilAvailable(locator).Text;
             });
+        }
+
+        // A sitemap group is named by its aria-label in older versions of the unified interface, and by the element its
+        // aria-labelledby refers to in newer ones.
+        private static string GetGroupName(IWebDriver driver, IWebElement group)
+        {
+            var label = group.GetAttribute("aria-label");
+            if (!string.IsNullOrEmpty(label))
+                return label;
+
+            var labelledBy = group.GetAttribute("aria-labelledby");
+            return string.IsNullOrEmpty(labelledBy)
+                ? null
+                : driver.FindElements(By.Id(labelledBy)).FirstOrDefault()?.GetAttribute("textContent")?.Trim();
         }
     }
 }

@@ -40,6 +40,15 @@
         [ThreadStatic]
         private static XrmApp xrmApp;
 
+        [ThreadStatic]
+        private static PortalApp portalApp;
+
+        [ThreadStatic]
+        private static ModelDrivenApp modelDrivenApp;
+
+        [ThreadStatic]
+        private static IAppUnderTest appUnderTest;
+
         private static IDictionary<string, string> userProfilesDirectories;
         private static object userProfilesDirectoriesLock = new object();
 
@@ -51,9 +60,12 @@
             get
             {
                 var hostSegments = TestConfig.GetTestUrl().Host.Split('.');
+                var scope = string.IsNullOrEmpty(TestConfig.DataverseUrl)
+                    ? $"https://{hostSegments[0]}.api.{hostSegments[1]}.dynamics.com//.default"
+                    : $"{new Uri(TestConfig.DataverseUrl).GetLeftPart(UriPartial.Authority)}/.default";
 
                 return GetApp()
-                    .AcquireTokenForClient(new string[] { $"https://{hostSegments[0]}.api.{hostSegments[1]}.dynamics.com//.default" })
+                    .AcquireTokenForClient(new string[] { scope })
                     .ExecuteAsync()
                     .Result.AccessToken;
             }
@@ -132,6 +144,24 @@
         protected static IWebDriver Driver => Client.Browser.Driver;
 
         /// <summary>
+        /// Gets the TALXIS Portal, for steps that act on a portal only.
+        /// </summary>
+        protected static PortalApp PortalApp => portalApp ?? (portalApp = new PortalApp(Client));
+
+        /// <summary>
+        /// Gets the model-driven app, for steps that act on a model-driven app only.
+        /// </summary>
+        protected static ModelDrivenApp ModelDrivenApp => modelDrivenApp ?? (modelDrivenApp = new ModelDrivenApp(XrmApp));
+
+        /// <summary>
+        /// Gets the app the steps act on, as the configured <see cref="TestConfiguration.Target"/> says: a model-driven app
+        /// or a TALXIS Portal. Steps that act on either kind of app use only this.
+        /// </summary>
+        protected static IAppUnderTest App => appUnderTest ?? (appUnderTest = TestConfig.Target == TestTarget.Portal
+            ? PortalApp
+            : ModelDrivenApp);
+
+        /// <summary>
         /// Gets the profile directory for the current scenario.
         /// </summary>
         protected static string CurrentProfileDirectory
@@ -163,7 +193,8 @@
                 if (testDriver == null)
                 {
                     testDriver = new TestDriver((IJavaScriptExecutor)Driver);
-                    testDriver.InjectOnPage(TestConfig.ApplicationUser != null ? AccessToken : null);
+                    var useApplicationUser = TestConfig.ApplicationUser != null || !string.IsNullOrEmpty(TestConfig.DataverseUrl);
+                    testDriver.InjectOnPage(useApplicationUser ? AccessToken : null, TestConfig.DataverseUrl, TestConfig.SuppressFlowsForTestData);
                 }
 
                 return testDriver;
@@ -231,6 +262,9 @@
                 });
 
             xrmApp = null;
+            portalApp = null;
+            modelDrivenApp = null;
+            appUnderTest = null;
             client = null;
             testDriver = null;
             testConfig?.Flush();
@@ -259,6 +293,13 @@
             if (TestConfig.ApplicationUser == null)
             {
                 throw new ConfigurationErrorsException("An application user has not been configured.");
+            }
+
+            if (string.IsNullOrEmpty(TestConfig.ApplicationUser.TenantId)
+                || string.IsNullOrEmpty(TestConfig.ApplicationUser.ClientId)
+                || string.IsNullOrEmpty(TestConfig.ApplicationUser.ClientSecret))
+            {
+                throw new ConfigurationErrorsException("The application user needs a tenantId, clientId and clientSecret.");
             }
 
             if (app == null)

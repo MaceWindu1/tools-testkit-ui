@@ -1,8 +1,8 @@
 ﻿namespace TALXIS.TestKit.Bindings.Steps
 {
     using FluentAssertions;
-    using OpenQA.Selenium;
     using Reqnroll;
+    using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors;
 
     /// <summary>
@@ -15,11 +15,10 @@
         /// Clicks the confirmation button on a confirm dialog.
         /// </summary>
         /// <param name="option">The option to click.</param>
-        [When(@"I (confirm|cancel) when presented with the confirmation dialog")]
+        [When(@"^I (confirm|cancel) when presented with the confirmation dialog$")]
         public static void WhenIConfirmWhenPresentedWithTheConfirmationDialog(string option)
         {
-            XrmApp.Dialogs.ConfirmationDialog(option == "confirm");
-            XrmApp.ThinkTime(2000);
+            App.Dialogs.AnswerConfirmation(option == "confirm");
         }
 
         /// <summary>
@@ -46,7 +45,7 @@
         /// Closes an opportunity.
         /// </summary>
         /// <param name="status">Whether the opportunity was won.</param>
-        [When("I close the opportunity as (won|lost)")]
+        [When("^I close the opportunity as (won|lost)$")]
         public static void WhenICloseTheOpportunityAs(string status)
         {
             XrmApp.Dialogs.CloseOpportunity(status == "won");
@@ -58,14 +57,14 @@
         [When("I close the alert dialog")]
         public static void WhenICloseTheAlertDialog()
         {
-            XrmApp.Dialogs.CloseWarningDialog();
+            App.Dialogs.CloseAlert();
         }
 
         /// <summary>
         /// Clicks an option on the publish dialog.
         /// </summary>
         /// <param name="option">The option to click.</param>
-        [When("I click (confirm|cancel) on the publish dialog")]
+        [When("^I click (confirm|cancel) on the publish dialog$")]
         public static void WhenIClickOnThePublishDialog(string option)
         {
             XrmApp.Dialogs.PublishDialog(option == "confirm");
@@ -75,7 +74,7 @@
         /// Clicks an option on the set state dialog.
         /// </summary>
         /// <param name="option">The option to click.</param>
-        [When("I click (ok|cancel) on the set state dialog")]
+        [When("^I click (ok|cancel) on the set state dialog$")]
         public static void WhenIClickOnTheSetStateDialog(string option)
         {
             XrmApp.Dialogs.SetStateDialog(option == "ok");
@@ -87,9 +86,7 @@
         [Then(@"an alert dialog should be displayed")]
         public static void ThenAlertDialogIsDisplayed()
         {
-            var dialog = XrmApp.Dialogs.GetAlertDialog();
-
-            dialog.Should().NotBeNull();
+            App.Dialogs.IsAlertShown().Should().BeTrue(because: "an alert dialog should be displayed");
         }
 
         /// <summary>
@@ -99,9 +96,22 @@
         [Then(@"an alert dialog with title '(.*)' should be displayed")]
         public static void ThenAlertDialogWithTextIsDisplayed(string expectedTitle)
         {
-            var dialogText = XrmApp.Dialogs.GetAlertDialogMessageText();
+            // Titles can contain record values (e.g. a number), referenced as parameters.
+            expectedTitle = expectedTitle.ReplaceTemplatedText(TestConfig.Parameters);
+            App.Dialogs.HasAlertTitle(expectedTitle, out var actual);
+            actual.Should().Be(expectedTitle);
+        }
 
-            dialogText.Should().Be(expectedTitle);
+        /// <summary>
+        /// Asserts that a confirmation dialog with the given title is displayed.
+        /// </summary>
+        /// <param name="expectedTitle">The title of the confirmation dialog that is expected.</param>
+        [Then(@"a confirmation dialog with title '(.*)' should be displayed")]
+        public static void ThenAConfirmationDialogWithTitleShouldBeDisplayed(string expectedTitle)
+        {
+            expectedTitle = expectedTitle.ReplaceTemplatedText(TestConfig.Parameters);
+            App.Dialogs.HasConfirmationTitle(expectedTitle, out var actual);
+            actual.Should().Be(expectedTitle, because: "a confirmation dialog with the title should be displayed");
         }
     }
 }

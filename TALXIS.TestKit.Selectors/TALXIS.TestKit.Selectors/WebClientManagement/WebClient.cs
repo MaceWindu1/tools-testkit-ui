@@ -51,6 +51,11 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
                 typeof(NoSuchElementException), typeof(StaleElementReferenceException));
         }
 
+        internal BrowserCommandOptions GetNoRetryOptions(string commandName)
+        {
+            return new BrowserCommandOptions(Constants.DefaultTraceSource, commandName, 1, 0, null, true, null);
+        }
+
         internal BrowserCommandResult<bool> InitializeModes()
         {
             return Execute(GetOptions("Initialize Unified Interface Modes"), driver =>

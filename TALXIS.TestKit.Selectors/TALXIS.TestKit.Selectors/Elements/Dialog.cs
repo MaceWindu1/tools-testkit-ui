@@ -44,6 +44,42 @@ namespace TALXIS.TestKit.Selectors
             return _dialogsManager.IsDialogVisible();
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the displayed dialog shows a button with a title or aria-label.
+        /// </summary>
+        /// <param name="label">The button's title or aria-label.</param>
+        public bool IsButtonVisible(string label)
+        {
+            return _dialogsManager.IsButtonVisible(label);
+        }
+
+        /// <summary>
+        /// Clicks a button with a title or aria-label on the displayed dialog, when it shows one.
+        /// </summary>
+        /// <param name="label">The button's title or aria-label.</param>
+        /// <returns>Whether the button was clicked.</returns>
+        public bool TryClickButton(string label)
+        {
+            return _dialogsManager.TryClickButton(label);
+        }
+
+        /// <summary>
+        /// Closes the displayed dialog with its close button, without saving.
+        /// </summary>
+        public void CloseDialog()
+        {
+            _dialogsManager.CloseDialog();
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the displayed dialog shows a text.
+        /// </summary>
+        /// <param name="text">The text.</param>
+        public bool IsTextVisible(string text)
+        {
+            return _dialogsManager.IsTextVisible(text);
+        }
+
         public string GetCurrentDialogLable()
         {
             return _dialogsManager.GetCurrentDialogLable();

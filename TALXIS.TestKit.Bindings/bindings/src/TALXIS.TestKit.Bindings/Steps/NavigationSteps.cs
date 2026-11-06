@@ -1,11 +1,7 @@
 ﻿namespace TALXIS.TestKit.Bindings.Steps
 {
-    using System.Linq;
     using FluentAssertions;
-    using OpenQA.Selenium;
     using Reqnroll;
-    using TALXIS.TestKit.Selectors;
-    using TALXIS.TestKit.Selectors.Browser;
 
     /// <summary>
     /// Step bindings relating to navigation.
@@ -90,10 +86,7 @@
         [Then(@"I should see the '(.*)' subarea")]
         public static void ThenIShouldSeeTheSubArea(string subArea)
         {
-            var subAreaElement = XrmApp.Navigation.GetSubAreaElement(subArea);
-
-            subAreaElement.Should().NotBeNull("the subarea image should be present");
-            subAreaElement.Displayed.Should().BeTrue("the subarea image should be visible");
+            App.Navigation.IsSubAreaShown(subArea, shown: true).Should().BeTrue(because: $"the '{subArea}' subarea should be shown");
         }
 
         /// <summary>
@@ -107,6 +100,39 @@
 
             var actualText = XrmApp.Navigation.GetGroupText(groupName);
             actualText.Should().Contain(groupName, $"the group '{groupName}' should be displayed on the sitemap");
+        }
+
+        /// <summary>
+        /// Opens a page by clicking its navigation item (a subarea of the current area in a model-driven app).
+        /// </summary>
+        /// <param name="subareaLabel">The item's label.</param>
+        [When(@"I open the '(.*)' page from the navigation")]
+        public static void WhenIOpenThePageFromTheNavigation(string subareaLabel)
+        {
+            App.Navigation.OpenPage(subareaLabel);
+        }
+
+        /// <summary>
+        /// Asserts that a navigation item is not shown.
+        /// </summary>
+        /// <param name="subareaLabel">The item's label.</param>
+        [Then(@"I should not see the '(.*)' subarea")]
+        public static void ThenIShouldNotSeeTheSubarea(string subareaLabel)
+        {
+            App.Navigation.IsSubAreaShown(subareaLabel, shown: false).Should().BeTrue(because: $"the '{subareaLabel}' subarea should not be shown");
+        }
+
+        /// <summary>
+        /// Asserts that a navigation item is shown but disabled, with the given message as its tooltip. Only a TALXIS Portal
+        /// can disable navigation items (TALXIS.Portal.App.sitemap.getItem(name).setDisabled(disabled, message)).
+        /// </summary>
+        /// <param name="subareaLabel">The item's label.</param>
+        /// <param name="expectedMessage">The expected message.</param>
+        [Then(@"the '(.*)' subarea should be disabled with the message '(.*)'")]
+        public static void ThenTheSubareaShouldBeDisabledWithTheMessage(string subareaLabel, string expectedMessage)
+        {
+            App.Navigation.IsSubAreaDisabled(subareaLabel, expectedMessage)
+                .Should().BeTrue(because: $"the '{subareaLabel}' subarea should be shown disabled with the message '{expectedMessage}'");
         }
     }
 }

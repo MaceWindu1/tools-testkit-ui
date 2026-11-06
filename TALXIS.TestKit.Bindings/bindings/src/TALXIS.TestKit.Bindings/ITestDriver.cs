@@ -1,5 +1,6 @@
 ﻿namespace TALXIS.TestKit.Bindings
 {
+    using System;
     using Microsoft.Xrm.Sdk;
 
     /// <summary>
@@ -11,7 +12,9 @@
         /// Injects the driver onto the current page.
         /// </summary>
         /// <param name="authToken">The application user auth token (if configured).</param>
-        void InjectOnPage(string authToken);
+        /// <param name="dataverseUrl">The URL of a separate Dataverse environment holding the test data (if configured).</param>
+        /// <param name="suppressFlows">Whether test data operations of the application user should not trigger Power Automate flows.</param>
+        void InjectOnPage(string authToken, string dataverseUrl, bool suppressFlows);
 
         /// <summary>
         /// Loads scenario test data.
@@ -30,6 +33,13 @@
         /// Deletes scenario test data.
         /// </summary>
         void DeleteTestData();
+
+        /// <summary>
+        /// Registers a record created outside the test data (e.g. through the UI) so that it is deleted with the test data.
+        /// </summary>
+        /// <param name="logicalName">The logical name of the record's table.</param>
+        /// <param name="id">The ID of the record.</param>
+        void TrackTestRecord(string logicalName, Guid id);
 
         /// <summary>
         /// Open a test record.

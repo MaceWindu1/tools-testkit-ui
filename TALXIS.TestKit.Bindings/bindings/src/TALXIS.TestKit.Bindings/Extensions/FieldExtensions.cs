@@ -5,6 +5,7 @@
     using System.Linq;
     using OpenQA.Selenium;
     using TALXIS.TestKit.Selectors;
+    using TALXIS.TestKit.Selectors.Browser;
 
     /// <summary>
     /// Extensions to the <see cref="Field"/> class.
@@ -23,7 +24,8 @@
 
             driver = driver ?? throw new ArgumentNullException(nameof(driver));
 
-            ReadOnlyCollection<IWebElement> lockedIcons = driver.FindElements(By.CssSelector($"div[data-id={field.Name}-locked-iconWrapper]"));
+            ReadOnlyCollection<IWebElement> lockedIcons = driver.FindElements(
+                By.XPath(AppElements.Xpath[AppReference.Entity.FieldContainer].Replace("[NAME]", (field.Name + "-locked-iconWrapper").ToXPathLiteral())));
 
             return lockedIcons.Any();
         }

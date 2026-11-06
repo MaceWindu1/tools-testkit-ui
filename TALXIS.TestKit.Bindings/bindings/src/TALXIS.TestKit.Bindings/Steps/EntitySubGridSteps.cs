@@ -25,10 +25,36 @@
         [When(@"I click the '(.*)' command on the '(.*)' subgrid")]
         public static void WhenISelectTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
-            Driver.WaitUntilAvailable(
-                By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subGridName)));
+            App.SubGrid.ClickCommand(subGridName, commandName);
+        }
 
-            XrmApp.Entity.SubGrid.ClickCommand(subGridName, commandName);
+        /// <summary>
+        /// Clicks an inline command on the row of a previously created test record in a subgrid, as a user does, without
+        /// selecting the record first (a grid can draw the highlight of a selected row over its commands). Only a TALXIS
+        /// Portal renders commands on rows.
+        /// </summary>
+        /// <param name="commandName">The label, id or icon file name of the command.</param>
+        /// <param name="alias">The alias of the test record.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [When(@"I click the '(.*)' command on '(.*)' in the '(.*)' subgrid")]
+        public static void WhenIClickTheCommandOnTheRecordInTheSubgrid(string commandName, string alias, string subGridName)
+        {
+            App.SubGrid.ClickRowCommand(subGridName, TestDriver.GetTestRecordReference(alias).Id, commandName);
+        }
+
+        /// <summary>
+        /// Clicks an inline command on the row of the record that shows a value in a column of a subgrid, without selecting
+        /// the record first. Only a TALXIS Portal renders commands on rows. Use it for records that are not test records and in the legacy view, whose
+        /// rows do not carry the record id.
+        /// </summary>
+        /// <param name="commandName">The label, id or icon file name of the command.</param>
+        /// <param name="fieldValue">The displayed value.</param>
+        /// <param name="fieldName">The column header label or the column's logical name.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [When(@"I click the '(.*)' command on the record with '(.*)' in the '(.*)' field in the '(.*)' subgrid")]
+        public static void WhenIClickTheCommandOnTheRecordWithInTheFieldInTheSubgrid(string commandName, string fieldValue, string fieldName, string subGridName)
+        {
+            App.SubGrid.ClickRowCommand(subGridName, fieldName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), commandName);
         }
 
         /// <summary>
@@ -39,10 +65,7 @@
         [When(@"I select '(.*)' from the '(.*)' subgrid")]
         public static void WhenISelectFromTheSubgrid(string alias, string subGridName)
         {
-            var index = GetSubGridItemIndexByAlias(alias, subGridName);
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid");
-
-            XrmApp.Entity.SubGrid.HighlightRecord(subGridName, Driver, index.Value);
+            App.SubGrid.SelectRecord(subGridName, TestDriver.GetTestRecordReference(alias).Id);
         }
 
         /// <summary>
@@ -97,9 +120,8 @@
         [Then(@"I should not be able to see '(.*)' in the '(.*)' subgrid")]
         public static void ThenIShouldNotBeAbleToSeeInTheSubgrid(string alias, string subGridName)
         {
-            GetSubGridItemIndexByAlias(alias, subGridName)
-                .HasValue
-                .Should().BeFalse(because: "the record should not exist in the subgrid");
+            App.SubGrid.ContainsRecord(subGridName, TestDriver.GetTestRecordReference(alias).Id, contained: false)
+                .Should().BeTrue(because: $"'{alias}' should not be shown in the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -112,12 +134,7 @@
         [Then(@"I should be able to see (exactly|more than|less than) (\d+) records in the '(.*)' subgrid")]
         public static void ThenIShouldBeAbleToSeeRecordsInTheSubgrid(string compare, int count, string subGridName)
         {
-            // var actualCount = XrmApp.Entity.SubGrid.GetSubGridItemsCount(subGridName);
-            // Temporary until XrmApp.Entity.SubGrid.GetSubGridItemsCount(subGridName) works for a count of 0
-            // https://github.com/microsoft/EasyRepro/issues/1318
-            var actualCount = (long)Driver.ExecuteScript(
-            $"return Xrm.Page.getControl(\"{subGridName}\").getGrid().getTotalRecordCount();");
-
+            var actualCount = App.SubGrid.CountRecords(subGridName);
 
             switch (compare)
             {
@@ -141,9 +158,8 @@
         [Then(@"the '(.*)' subgrid should contain '(.*)'")]
         public static void ThenTheGridShouldContain(string subGridName, string recordAlias)
         {
-            var index = GetSubGridItemIndexByAlias(recordAlias, subGridName);
-
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid");
+            App.SubGrid.ContainsRecord(subGridName, TestDriver.GetTestRecordReference(recordAlias).Id, contained: true)
+                .Should().BeTrue(because: $"'{recordAlias}' should be shown in the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -212,10 +228,9 @@
         [Then(@"the '(.*)' subgrid should contain a record with '(.*)' in the '(.*)' (?:text|numeric|currency|lookup|datetime|optionset|multioptionset|boolean) field")]
         public static void ThenTheSubgridShouldContainRecordsWithInTheField(string subGridName, string fieldValue, string fieldName)
         {
-            XrmApp.Entity.SubGrid
-                .GetSubGridItems(subGridName)
-                .Should()
-                .Contain(item => item.GetAttribute<string>(fieldName) == fieldValue, because: "a matching record should be present in the subgrid");
+            fieldValue = fieldValue.ReplaceTemplatedText(TestConfig.Parameters);
+            App.SubGrid.ContainsRecord(subGridName, fieldName, fieldValue)
+                .Should().BeTrue(because: $"a record with '{fieldValue}' in '{fieldName}' should be shown in the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -226,13 +241,8 @@
         [Then(@"I should be able to see the '(.*)' command on the '(.*)' subgrid")]
         public static void ThenIShouldBeAbleToSeeTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
-            Driver
-                .WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subGridName)))
-                .WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandBar]))
-                .WaitUntilVisible(
-                    By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCommandLabel].Replace("[NAME]", commandName)),
-                    new TimeSpan(0, 0, 5),
-                    $"Could not find the {commandName} command on the {subGridName} subgrid.");
+            App.SubGrid.IsCommandShown(subGridName, commandName, shown: true)
+                .Should().BeTrue(because: $"the '{commandName}' command should be shown on the '{subGridName}' subgrid");
         }
 
         /// <summary>
@@ -254,7 +264,34 @@
         [Then(@"I should not be able to see the '(.*)' command on the '(.*)' subgrid")]
         public static void ThenIShouldNotBeAbleToSeeTheCommandOnTheSubgrid(string commandName, string subGridName)
         {
-            XrmApp.Entity.SubGrid.TryToFindAssertSubgridCommand(commandName, subGridName).Should().BeNull();
+            App.SubGrid.IsCommandShown(subGridName, commandName, shown: false)
+                .Should().BeTrue(because: $"the '{commandName}' command should not be shown on the '{subGridName}' subgrid");
+        }
+
+        /// <summary>
+        /// Asserts that a subgrid command is present and enabled. Distinct from visibility: some
+        /// commands stay in the DOM (just greyed out) when their EnableRule evaluates to false,
+        /// rather than being removed by a DisplayRule.
+        /// </summary>
+        /// <param name="commandName">The name of the command.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [Then(@"the '(.*)' command on the '(.*)' subgrid should be enabled")]
+        public static void ThenTheCommandOnTheSubgridShouldBeEnabled(string commandName, string subGridName)
+        {
+            App.SubGrid.IsCommandEnabled(subGridName, commandName, enabled: true)
+                .Should().BeTrue(because: $"the '{commandName}' command should be enabled");
+        }
+
+        /// <summary>
+        /// Asserts that a subgrid command is present but disabled.
+        /// </summary>
+        /// <param name="commandName">The name of the command.</param>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        [Then(@"the '(.*)' command on the '(.*)' subgrid should be disabled")]
+        public static void ThenTheCommandOnTheSubgridShouldBeDisabled(string commandName, string subGridName)
+        {
+            App.SubGrid.IsCommandEnabled(subGridName, commandName, enabled: false)
+                .Should().BeTrue(because: $"the '{commandName}' command should be disabled");
         }
 
         /// <summary>
@@ -299,26 +336,7 @@
         [When(@"I select a record with '(.*)' in the '(.*)' field in the '(.*)' subgrid")]
         public static void WhenISelectARecordWithInTheFieldInTheSubgrid(string fieldValue, string fieldName, string subGridName)
         {
-            List<GridItem> subGridItems = XrmApp.Entity.SubGrid.GetSubGridItems(subGridName);
-
-            GridItem subGridItem = subGridItems.FirstOrDefault(item => item.GetAttribute<string>(fieldName) == fieldValue);
-
-            if (subGridItem != default(GridItem))
-            {
-                XrmApp.Entity.SubGrid.HighlightRecord(subGridName, Driver, subGridItems.IndexOf(subGridItem));
-            }
-            else
-            {
-                throw new Exception($"Could not find record with field '{fieldName}' with value '{fieldValue}' in the '{subGridName}' subgrid.");
-            }
-        }
-
-        private static int? GetSubGridItemIndexByAlias(string recordAlias, string subGridName)
-        {
-            var record = TestDriver.GetTestRecordReference(recordAlias);
-            var index = XrmApp.Entity.SubGrid.GetRecordIndexById(subGridName, Driver, record.Id);
-
-            return index > -1 ? index : default(int?);
+            App.SubGrid.SelectRecord(subGridName, fieldName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters));
         }
     }
 }

@@ -72,6 +72,19 @@ namespace TALXIS.TestKit.Selectors.Browser
 
         public static bool IsValueEqualsTo(this string fieldValue, string expected)
             => fieldValue == expected || (fieldValue.IsEmptyValue() && expected.IsEmptyValue());
+
+        /// <summary>
+        /// Quotes a string as an XPath string literal, also when it contains an apostrophe.
+        /// </summary>
+        /// <param name="value">The string.</param>
+        /// <returns>The XPath literal.</returns>
+        public static string ToXPathLiteral(this string value)
+        {
+            if (value.IndexOf('\'') < 0)
+                return $"'{value}'";
+
+            return "concat('" + value.Replace("'", "', \"'\", '") + "')";
+        }
     }
 
     public static class BoolExtensions
