@@ -56,6 +56,27 @@ namespace TALXIS.TestKit.Selectors
             return _gridManager.GetSubGridItems(subgridName);
         }
 
+        /// <summary>
+        /// Gets the index of a record in a subgrid by its id.
+        /// </summary>
+        /// <returns>The index, or -1 when the subgrid does not show the record.</returns>
+        public int GetRecordIndexById(string subGridName, Guid recordId) => _entityManager.GetSubGridRecordIndexById(subGridName, recordId);
+
+        /// <summary>
+        /// Selects the record at an index of a subgrid.
+        /// </summary>
+        public void HighlightRecord(string subGridName, int index) => _entityManager.HighlightSubGridRecord(subGridName, index);
+
+        /// <summary>
+        /// Counts all records of a subgrid, also when it has none.
+        /// </summary>
+        public long GetTotalRecordCount(string subGridName) => _entityManager.GetSubGridTotalRecordCount(subGridName);
+
+        /// <summary>
+        /// Waits until a subgrid and its command bar have loaded.
+        /// </summary>
+        public void WaitForCommandBar(string subGridName) => _entityManager.WaitForSubGridCommandBar(subGridName);
+
         public IWebElement TryToFindAssertSubgridCommand(string commandName, string subGridName)
         {
             return _entityManager.TryToFindAssertSubgridCommand(commandName, subGridName);

@@ -7,6 +7,21 @@
 <div data-id="name"><label>Name</label><input value="Contoso Tower"></div>
 <div data-id="talxis_preferredchannels"><label>Preferred channels</label></div>
 <div data-id="talxis_note"><label>Note</label><textarea></textarea></div>
+<div data-id="talxis_number"><label>Number</label><input value="C0001" readonly></div>
+<div data-id="talxis_number-locked-iconWrapper"></div>
+
+<!-- A subgrid whose command bar shows a command enabled and one disabled (greyed out by its enable rule). -->
+<div id="dataSetRoot_Contacts">
+  <ul data-id="Contacts-CommandBar">
+    <li><button aria-label="Add Contact"><span>Add Contact</span></button></li>
+    <li><button aria-label="Deactivate" aria-disabled="true"><span>Deactivate</span></button></li>
+  </ul>
+</div>
+
+<!-- Text behind the dialogs, a dialog and a dialog opened from it (topmost, later in the page). -->
+<p>Summary</p>
+<div role="dialog"><h1>Wizard</h1><p>Step 1</p><button title="Next">Next</button></div>
+<div role="dialog"><h1>Confirm</h1><p>Leave the wizard?</p><button title="Leave">Leave</button></div>
 
 <script>
   function attribute(name, value) { return { getName: () => name, getValue: () => value }; }
@@ -16,6 +31,7 @@
     name: attribute('name', 'Contoso Tower'),
     talxis_preferredchannels: attribute('talxis_preferredchannels', []),
     talxis_note: attribute('talxis_note', ''),
+    talxis_number: attribute('talxis_number', 'C0001'),
     talxis_emailfrequency: attribute('talxis_emailfrequency', null),
     talxis_phonefrequency: attribute('talxis_phonefrequency', 100000001),
   };
@@ -24,6 +40,7 @@
     control('Name', attributes.name),
     control('Preferred channels', attributes.talxis_preferredchannels),
     control('Note', attributes.talxis_note),
+    control('Number', attributes.talxis_number),
     control('Email frequency', attributes.talxis_emailfrequency),
     control('Phone frequency', attributes.talxis_phonefrequency),
     // A subgrid's control has a label but no attribute.

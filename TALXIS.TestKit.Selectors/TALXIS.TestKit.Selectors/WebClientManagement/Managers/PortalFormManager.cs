@@ -87,7 +87,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             return Client.Execute(Client.GetNoRetryOptions($"Get Portal Field Value: {field}"), driver =>
             {
                 // Values may be filled in asynchronously (e.g. a nested form showing the selected record, onchange handlers).
-                PortalPageManager.WaitFor(driver, () => GetValue(FindField(driver, field)) == expected, timeout);
+                WaitForField(driver, field, cell => GetValue(cell) == expected, timeout);
                 return GetValue(FindField(driver, field));
             });
         }
@@ -102,26 +102,26 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         internal BrowserCommandResult<bool> IsFieldRequired(string field, bool required)
         {
             return Client.Execute(Client.GetNoRetryOptions($"Is Portal Field Required: {field}"), driver =>
-                PortalPageManager.WaitFor(driver, () => IsRequired(FindField(driver, field)) == required, StateTimeout));
+                WaitForField(driver, field, cell => IsRequired(cell) == required, StateTimeout));
         }
 
         internal BrowserCommandResult<bool> IsFieldEditable(string field, bool editable)
         {
             return Client.Execute(Client.GetNoRetryOptions($"Is Portal Field Editable: {field}"), driver =>
-                PortalPageManager.WaitFor(driver, () => FindField(driver, field) is { } cell && (cell.Displayed && !IsReadOnly(cell)) == editable, StateTimeout));
+                WaitForField(driver, field, cell => (cell.Displayed && !IsReadOnly(cell)) == editable, StateTimeout));
         }
 
         internal BrowserCommandResult<bool> IsFieldEmpty(string field)
         {
             return Client.Execute(Client.GetNoRetryOptions($"Is Portal Field Empty: {field}"), driver =>
-                PortalPageManager.WaitFor(driver, () => GetValue(FindField(driver, field)).Length == 0, StateTimeout));
+                WaitForField(driver, field, cell => GetValue(cell).Length == 0, StateTimeout));
         }
 
         internal BrowserCommandResult<bool> HasFieldError(string field, string message)
         {
             // The control renders the error inside the field's form cell; scripts validate asynchronously.
             return Client.Execute(Client.GetNoRetryOptions($"Has Portal Field Error: {field}"), driver =>
-                PortalPageManager.WaitFor(driver, () => FindField(driver, field).Text.Contains(message, StringComparison.Ordinal), StateTimeout));
+                WaitForField(driver, field, cell => cell.Text.Contains(message, StringComparison.Ordinal), StateTimeout));
         }
 
         /// <summary>
@@ -266,6 +266,14 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 
             // Text fields save their value on blur.
             input.SendKeys(Keys.Tab);
+        }
+
+        // Finds the field first, so that a missing field fails with its own message rather than as a state that was not
+        // reached, then waits for its state, looking the field up again when it re-renders.
+        private static bool WaitForField(IWebDriver driver, string field, Func<IWebElement, bool> state, TimeSpan timeout)
+        {
+            FindField(driver, field);
+            return PortalPageManager.WaitFor(driver, () => TryFindField(driver, field) is { } cell && state(cell), timeout);
         }
 
         private static ISearchContext GetFormScope(IWebDriver driver)

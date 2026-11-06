@@ -27,8 +27,8 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 
         internal BrowserCommandResult<bool> LogIn(Uri portalUrl, SecureString username, SecureString password)
         {
-            if (username == null || password == null)
-                throw new ArgumentException("Signing in to a TALXIS Portal needs a username and a password.");
+            if (username == null || username.Length == 0 || password == null || password.Length == 0)
+                throw new ArgumentException("Signing in to a TALXIS Portal needs a username and a password. Set them in user secrets or environment variables.");
 
             return Client.Execute(Client.GetNoRetryOptions("Portal Login"), driver =>
             {

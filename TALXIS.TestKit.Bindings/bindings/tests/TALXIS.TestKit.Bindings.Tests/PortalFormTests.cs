@@ -3,6 +3,7 @@ namespace TALXIS.TestKit.Bindings.Tests
     using System;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using OpenQA.Selenium;
+    using TALXIS.TestKit.Selectors;
     using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors.WebClientManagement;
 
@@ -62,6 +63,15 @@ namespace TALXIS.TestKit.Bindings.Tests
             Assert.AreEqual("C0001", PortalFormManager.GetValue(PortalFormManager.TryFindField(this.driver, "Customer number")));
             Assert.IsNotNull(PortalFormManager.TryFindField(this.driver, "talxis_internalid"));
             Assert.IsNull(PortalFormManager.TryFindField(this.driver, "Missing field"));
+        }
+
+        [TestMethod]
+        public void FailsOnAMissingFieldWithItsOwnMessageRatherThanAsAStateNotReached()
+        {
+            var entity = new PortalApp(PortalTestPage.Client()).Entity;
+
+            var error = Assert.ThrowsException<WebDriverTimeoutException>(() => entity.IsFieldRequired("Credt Limit", required: true));
+            StringAssert.Contains(error.Message, "The field 'Credt Limit' was not found");
         }
 
         [TestMethod]

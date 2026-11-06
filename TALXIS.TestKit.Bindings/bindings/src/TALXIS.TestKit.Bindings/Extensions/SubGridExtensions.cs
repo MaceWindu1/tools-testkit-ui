@@ -22,17 +22,9 @@
         /// <returns>The index of the record.</returns>
         public static int GetRecordIndexById(this SubGrid subGrid, string subgridName, IWebDriver driver, Guid recordId)
         {
-            if (driver is null)
-            {
-                throw new ArgumentNullException(nameof(driver));
-            }
+            subGrid = subGrid ?? throw new ArgumentNullException(nameof(subGrid));
 
-            driver.WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subgridName)));
-
-            var index = (long)driver.ExecuteScript(
-                $"return Xrm.Page.getControl(\"{subgridName}\").getGrid().getRows().get().findIndex(row => row.getData().getEntity().getId() == \"{recordId.ToString("B").ToUpper(CultureInfo.CurrentCulture)}\")");
-
-            return Convert.ToInt32(index);
+            return subGrid.GetRecordIndexById(subgridName, recordId);
         }
 
         /// <summary>
@@ -45,27 +37,9 @@
         /// <param name="index">The index of the record.</param>
         public static void HighlightRecord(this SubGrid subGrid, string subgridName, IWebDriver driver, int index)
         {
-            if (driver is null)
-            {
-                throw new ArgumentNullException(nameof(driver));
-            }
+            subGrid = subGrid ?? throw new ArgumentNullException(nameof(subGrid));
 
-            var subGridElement = driver.FindElement(
-                By.XPath(AppElements.Xpath[AppReference.Entity.SubGridContents].Replace("[NAME]", subgridName)));
-            var rows = subGridElement.FindElements(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridRows]));
-
-            if (rows.Count == 0)
-            {
-                throw new NoSuchElementException($"No records were found for subgrid {subgridName}");
-            }
-
-            if (index + 1 > rows.Count)
-            {
-                throw new IndexOutOfRangeException($"Subgrid {subgridName} record count: {rows.Count}. Expected: {index + 1}");
-            }
-
-            rows[index].FindElements(By.XPath(AppElements.Xpath[AppReference.Entity.SubGridCells]))[0].Click();
-            driver.WaitForTransaction();
+            subGrid.HighlightRecord(subgridName, index);
         }
     }
 }

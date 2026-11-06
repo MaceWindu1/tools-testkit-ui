@@ -5,6 +5,8 @@ namespace TALXIS.TestKit.Bindings.Tests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using OpenQA.Selenium;
     using OpenQA.Selenium.Chrome;
+    using TALXIS.TestKit.Selectors.Browser;
+    using TALXIS.TestKit.Selectors.WebClientManagement;
     using WebDriverManager;
     using WebDriverManager.DriverConfigs.Impl;
     using WebDriverManager.Helpers;
@@ -53,6 +55,17 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             Driver.Navigate().GoToUrl(new Uri(Path.Combine(AppContext.BaseDirectory, "TestPages", page)).AbsoluteUri);
             return Driver;
+        }
+
+        /// <summary>
+        /// Gets a web client on the browser of the test run, for the apps (PortalApp, ModelDrivenApp) on the test pages.
+        /// </summary>
+        /// <returns>The web client.</returns>
+        public static WebClient Client()
+        {
+            var client = new WebClient(new BrowserOptions());
+            client.Browser = new InteractiveBrowser(Driver);
+            return client;
         }
 
         /// <summary>

@@ -30,7 +30,7 @@ namespace TALXIS.TestKit.Selectors.DTO.Locators
         internal static By Displayed => By.XPath(AppElements.Xpath[AppReference.Dialogs.Displayed]);
         internal static By ButtonByLabel(string label) => By.XPath(AppElements.Xpath[AppReference.Dialogs.ButtonByLabel].Replace("[LABEL]", label.ToXPathLiteral()));
         internal static By CloseButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.CloseButton]);
-        internal static By TextOnPage(string text) => By.XPath(AppElements.Xpath[AppReference.Dialogs.TextOnPage].Replace("[LABEL]", text.ToXPathLiteral()));
+        internal static By Text(string text) => By.XPath(AppElements.Xpath[AppReference.Dialogs.Text].Replace("[LABEL]", text.ToXPathLiteral()));
         internal static By CancelButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.CancelButton]);
         internal static By OkButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.OkButton]);
         internal static By DuplicateDetectionIgnoreSaveButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.DuplicateDetectionIgnoreSaveButton]);

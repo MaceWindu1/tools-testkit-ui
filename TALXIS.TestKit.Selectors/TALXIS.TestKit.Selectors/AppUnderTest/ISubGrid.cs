@@ -87,7 +87,8 @@ namespace TALXIS.TestKit.Selectors
 
         /// <summary>
         /// Checks whether a command of a subgrid is enabled. A model-driven app shows a command whose enable rules fail as
-        /// disabled; a TALXIS Portal does not render it, so there enabled means shown and disabled means not shown.
+        /// disabled. A TALXIS Portal does not render it, so there enabled means shown, and a disabled command cannot be told
+        /// from a missing one: checking for one throws <see cref="NotSupportedException"/>.
         /// </summary>
         /// <param name="subGrid">The subgrid's name.</param>
         /// <param name="command">The command's label (or, in a TALXIS Portal, its button id, command id or icon file name).</param>

@@ -13,7 +13,6 @@
     using AngleSharp.Dom;
     using System.Threading;
     using OpenQA.Selenium.DevTools;
-    using TALXIS.TestKit.Bindings.Extensions.CookiesManagement;
 
     /// <summary>
     /// Step bindings related to logging in.
@@ -29,7 +28,8 @@
         [Given("I am logged in to the '(.*)' app as '(.*)'")]
         public static void GivenIAmLoggedInToTheAppAs(string appName, string userAlias)
         {
-            LogIn(TestConfig.GetTestUrl(), TestConfig.GetUser(userAlias, useCurrentUser: false), appName);
+            var user = TestConfig.GetUser(userAlias, useCurrentUser: false);
+            ModelDrivenApp.Login.LogIn(TestConfig.GetTestUrl(), user.Username.ToSecureString(), user.Password?.ToSecureString(), user.OtpToken?.ToSecureString(), appName);
         }
 
         /// <summary>
@@ -41,82 +41,12 @@
         public static void GivenIAmLoggedInAs(string userAlias)
         {
             var user = TestConfig.GetUser(userAlias, useCurrentUser: false);
+            if (string.IsNullOrEmpty(user.Username))
+            {
+                throw new InvalidOperationException($"User '{userAlias}' has no username configured. Set it in user secrets or environment variables.");
+            }
+
             App.Login.LogIn(TestConfig.GetTestUrl(), user.Username.ToSecureString(), user.Password?.ToSecureString(), user.OtpToken?.ToSecureString());
-        }
-
-        /// <summary>
-        /// Logs in to a model-driven app, reusing the sign-in cookies of an earlier scenario.
-        /// </summary>
-        /// <param name="url">The URL of the app.</param>
-        /// <param name="user">The user.</param>
-        /// <param name="appName">The app to open when the URL names none (by its appid).</param>
-        internal static void LogIn(Uri url, UserConfiguration user, string appName)
-        {
-            Login(Driver, url, user);
-
-            if (!url.Query.Contains("appid"))
-            {
-                XrmApp.Navigation.OpenApp(appName);
-            }
-
-            Driver.WaitForTransaction();
-
-            CloseTeachingBubbles();
-
-            WaitForMainPage(Driver);
-        }
-
-        private static void Login(IWebDriver driver, Uri url, UserConfiguration user)
-        {
-            if (!CookieManager.UserLoginCookies.ContainsKey(user.Username))
-            {
-                if (!CookieManager.TryLoadCookies(driver, user.Username))
-                {
-                    LoginViaUi(url, user);
-
-                    CookieManager.SaveCookies(driver, url, user.Username);
-                }
-                else
-                {
-                    CookieManager.LoginViaCookies(driver, url, user.Username);
-                }
-            }
-            else
-            {
-                CookieManager.LoginViaCookies(driver, url, user.Username);
-            }
-        }
-
-        private static void LoginViaUi(Uri url, UserConfiguration user)
-        {
-            if (!string.IsNullOrEmpty(user.OtpToken))
-            {
-                XrmApp.OnlineLogin.Login(url, user.Username.ToSecureString(), user.Password.ToSecureString(), user.OtpToken.ToSecureString());
-            }
-            else
-            {
-                XrmApp.OnlineLogin.Login(url, user.Username.ToSecureString(), user.Password.ToSecureString());
-            }
-        }
-
-        private static void CloseTeachingBubbles()
-        {
-            foreach (var closeButton in Driver.FindElements(By.ClassName("ms-TeachingBubble-closebutton")))
-            {
-                closeButton.Click();
-            }
-        }
-
-        private static bool WaitForMainPage(IWebDriver driver, TimeSpan? timeout = null)
-        {
-            timeout = timeout ?? TimeSpan.FromSeconds(15);
-            var isUCI = driver.HasElement(By.XPath(Elements.Xpath[Reference.Login.CrmUCIMainPage]));
-
-            if (isUCI) driver.WaitForTransaction();
-
-            var element = driver.WaitUntilAvailable(By.XPath(Elements.Xpath[Reference.Login.CrmMainPage]), timeout);
-
-            return element != null;
         }
     }
 }

@@ -20,6 +20,7 @@ namespace TALXIS.TestKit.Bindings.Steps
     {
         private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
 
+        [ThreadStatic]
         private static DateTime scenarioStartedAtUtc;
 
         private static string DownloadsDirectory =>

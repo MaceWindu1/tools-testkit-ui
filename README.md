@@ -162,7 +162,9 @@ B2C does not return to the portal, e.g. after its own error), with what the port
   icon, by the icon's file name (`'download.svg'`). Commands for one selected record (an enable rule with a selection
   count of 1..1) are rendered on each record's row; the steps look for them on the rows of the selected records (all
   rows when none is selected), other commands on the subgrid's ribbon. The portal does not render a command whose
-  rules fail, so a disabled command is one that is not shown. In a subgrid without a selection column, selecting a
+  rules fail, so a disabled command cannot be told from a missing one: `the '<command>' command on the '<subgrid>'
+  subgrid should be disabled` fails with a `NotSupportedException`; check `I should not be able to see the '<command>'
+  command on the '<subgrid>' subgrid` instead. In a subgrid without a selection column, selecting a
   record makes its row the one the command steps look at (in the legacy view it first clicks a plain cell of the row,
   which selects it; in the grid a click would open the record). To click a command on a record's row without
   selecting the record, as a user does (a grid can draw a selected row's highlight over its commands), use
@@ -207,10 +209,11 @@ public class MyCustomSteps : PowerAppsStepDefiner
 
 A step that should work on a model-driven app and on a TALXIS Portal alike uses the `App` property instead: an
 `IAppUnderTest` (TALXIS.TestKit.Selectors) for the configured target, with the operations a user performs (log in, open
-a page, select a tab, set a field, click a subgrid command, answer a dialog) rather than the markup. For a model-driven
-app it acts through `XrmApp`, for a TALXIS Portal through `PortalApp`, the portal's counterpart of `XrmApp` in
-TALXIS.TestKit.Selectors, which keeps the portal's selectors (`PortalElements`) apart from the model-driven app's
-(`AppElements`). An operation the target does not have throws `NotSupportedException`.
+a page, select a tab, set a field, click a subgrid command, answer a dialog) rather than the markup. Both apps are in
+TALXIS.TestKit.Selectors: `ModelDrivenApp` acts through `XrmApp`, and `PortalApp`, the portal's counterpart of
+`XrmApp`, keeps the portal's selectors (`PortalElements`) apart from the model-driven app's (`AppElements`). Steps for
+one kind of app only use the `ModelDrivenApp` or `PortalApp` property. An operation the target does not have throws
+`NotSupportedException`.
 
 ```csharp
 [Then(@"the '(.*)' field should be (mandatory|optional)")]

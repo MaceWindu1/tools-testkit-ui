@@ -85,7 +85,7 @@
                 // The page's DOM shows what the steps were looking for when the screenshot does not.
                 File.WriteAllText(Path.Combine(screenshotsFolder, $"{fileName}.html"), Driver.PageSource);
             }
-            catch (WebDriverException ex)
+            catch (Exception ex) when (ex is WebDriverException || ex is IOException || ex is UnauthorizedAccessException)
             {
                 // Don't throw an unhandled exception if the screenshot can't be captured as this will prevent the WebDriver instance from being cleaned up.
                 Console.WriteLine($"Failed to capture screenshot: {ex.Message}.");

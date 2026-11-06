@@ -44,6 +44,9 @@
         private static PortalApp portalApp;
 
         [ThreadStatic]
+        private static ModelDrivenApp modelDrivenApp;
+
+        [ThreadStatic]
         private static IAppUnderTest appUnderTest;
 
         private static IDictionary<string, string> userProfilesDirectories;
@@ -146,12 +149,17 @@
         protected static PortalApp PortalApp => portalApp ?? (portalApp = new PortalApp(Client));
 
         /// <summary>
+        /// Gets the model-driven app, for steps that act on a model-driven app only.
+        /// </summary>
+        protected static ModelDrivenApp ModelDrivenApp => modelDrivenApp ?? (modelDrivenApp = new ModelDrivenApp(XrmApp));
+
+        /// <summary>
         /// Gets the app the steps act on, as the configured <see cref="TestConfiguration.Target"/> says: a model-driven app
         /// or a TALXIS Portal. Steps that act on either kind of app use only this.
         /// </summary>
         protected static IAppUnderTest App => appUnderTest ?? (appUnderTest = TestConfig.Target == TestTarget.Portal
             ? PortalApp
-            : new ModelDrivenApp());
+            : ModelDrivenApp);
 
         /// <summary>
         /// Gets the profile directory for the current scenario.
@@ -255,6 +263,7 @@
 
             xrmApp = null;
             portalApp = null;
+            modelDrivenApp = null;
             appUnderTest = null;
             client = null;
             testDriver = null;

@@ -46,7 +46,18 @@ namespace TALXIS.TestKit.Selectors
         public bool IsCommandShown(string subGrid, string command, bool shown) => _gridManager.IsCommandShown(subGrid, command, shown).Value;
 
         /// <inheritdoc/>
-        /// <remarks>The portal does not render a command whose rules fail: enabled means shown, disabled not shown.</remarks>
-        public bool IsCommandEnabled(string subGrid, string command, bool enabled) => IsCommandShown(subGrid, command, enabled);
+        /// <remarks>The portal does not render a command whose rules fail, so a disabled command cannot be told from a
+        /// missing one: enabled means shown, and disabled is not supported.</remarks>
+        public bool IsCommandEnabled(string subGrid, string command, bool enabled)
+        {
+            if (!enabled)
+            {
+                throw new NotSupportedException(
+                    $"A TALXIS Portal does not render a command whose rules fail, so a disabled command cannot be told from a missing one. "
+                    + $"Check that it is not shown: I should not be able to see the '{command}' command on the '{subGrid}' subgrid.");
+            }
+
+            return IsCommandShown(subGrid, command, shown: true);
+        }
     }
 }

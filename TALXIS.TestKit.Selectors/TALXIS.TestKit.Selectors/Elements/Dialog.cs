@@ -72,7 +72,7 @@ namespace TALXIS.TestKit.Selectors
         }
 
         /// <summary>
-        /// Gets a value indicating whether a text is shown on the page.
+        /// Gets a value indicating whether the displayed dialog shows a text.
         /// </summary>
         /// <param name="text">The text.</param>
         public bool IsTextVisible(string text)

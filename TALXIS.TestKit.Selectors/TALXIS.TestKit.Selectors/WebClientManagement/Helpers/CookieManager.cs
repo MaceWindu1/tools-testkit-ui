@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Collections.Concurrent;
 
-namespace TALXIS.TestKit.Bindings.Extensions.CookiesManagement
+namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
 {
     internal static class CookieManager
     {

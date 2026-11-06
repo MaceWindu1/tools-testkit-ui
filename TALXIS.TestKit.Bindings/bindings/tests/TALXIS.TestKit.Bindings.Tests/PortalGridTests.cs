@@ -5,6 +5,7 @@ namespace TALXIS.TestKit.Bindings.Tests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using OpenQA.Selenium;
     using TALXIS.TestKit.Bindings.Extensions;
+    using TALXIS.TestKit.Selectors;
     using TALXIS.TestKit.Selectors.WebClientManagement;
 
     /// <summary>
@@ -32,6 +33,15 @@ namespace TALXIS.TestKit.Bindings.Tests
             Assert.AreEqual(2, PortalGridManager.FindRows(this.invoices, FirstInvoice).Count, "A record has a row for each pinned part.");
             Assert.AreEqual(0, PortalGridManager.FindRows(this.invoices, Guid.Parse("33333333-3333-3333-3333-333333333333")).Count);
             Assert.AreEqual(2, PortalGridManager.CountRecords(this.invoices));
+        }
+
+        [TestMethod]
+        public void RefusesToCheckForADisabledCommandItCannotTellFromAMissingOne()
+        {
+            var subGrid = new PortalApp(PortalTestPage.Client()).SubGrid;
+
+            var error = Assert.ThrowsException<NotSupportedException>(() => subGrid.IsCommandEnabled("InvoicesSubgrid", "Aprove", enabled: false));
+            StringAssert.Contains(error.Message, "I should not be able to see the 'Aprove' command on the 'InvoicesSubgrid' subgrid");
         }
 
         [TestMethod]

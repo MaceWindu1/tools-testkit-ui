@@ -10,6 +10,7 @@ namespace TALXIS.TestKit.Selectors
         public static class Application
         {
             public static string Shell = "App_Shell";
+            public static string TeachingBubbleCloseButton = "App_TeachingBubbleCloseButton";
         }
 
         public static class Navigation
@@ -128,6 +129,9 @@ namespace TALXIS.TestKit.Selectors
             public static string SubGridRow = "Entity_SubGrid_Row";
             public static string SubGridLastRow = "Entity_SubGrid_LastRow";
             public static string SubGridContents = "Entity_SubGridContents";
+            public static string SubGridCommandButtonOfLabel = "Entity_SubGridCommandButtonOfLabel";
+            public static string FieldContainer = "Entity_FieldContainer";
+            public static string FieldLabelContainer = "Entity_FieldLabelContainer";
             public static string SubGridList = "Entity_SubGridList";
             public static string SubGridListCells = "Entity_SubGridListCells";
             public static string SubGridViewPickerButton = "Entity_SubGridViewPickerButton";
@@ -302,7 +306,7 @@ namespace TALXIS.TestKit.Selectors
             public static string Displayed = "Dialog_Displayed";
             public static string ButtonByLabel = "Dialog_ButtonByLabel";
             public static string CloseButton = "Dialog_CloseButton";
-            public static string TextOnPage = "Dialog_TextOnPage";
+            public static string Text = "Dialog_Text";
             public static string SwitchProcessContainer = "Dialog_SwitchProcessContainer";
         }
 
@@ -393,6 +397,7 @@ namespace TALXIS.TestKit.Selectors
 
             //Application 
             { "App_Shell"    , "//*[@id=\"ApplicationShell\"]"},
+            { "App_TeachingBubbleCloseButton", "//*[contains(concat(' ', normalize-space(@class), ' '), ' ms-TeachingBubble-closebutton ')]" },
 
             //PowerApp
             { "PowerApp_ModalFormContainer"       , "//iframe[contains(@src,\'[NAME]\')]"},
@@ -512,6 +517,12 @@ namespace TALXIS.TestKit.Selectors
             { "Entity_SubGrid_LastRow"           , "//div[@ref='centerContainer']//div[@role='rowgroup']//div[contains(@class, 'ag-row-last')]"},
             { "Entity_SubGridTitle", "//div[contains(text(), '[NAME]')]" },
             { "Entity_SubGridContents", "//div[@id=\"dataSetRoot_[NAME]\"]" },
+            // The button of a subgrid command's label (Entity_SubGridCommandLabel), which shows whether it is enabled.
+            { "Entity_SubGridCommandButtonOfLabel", "./ancestor::button[1]" },
+            // A field shown on the form (also its locked icon, [NAME]-locked-iconWrapper); [NAME] is an XPath literal.
+            { "Entity_FieldContainer", "//div[@data-id=[NAME]]" },
+            // The row of the field whose label shows [LABEL] (an XPath literal); its data-id is the field's logical name.
+            { "Entity_FieldLabelContainer", "//label[text()=[LABEL]]/ancestor-or-self::div[@data-preview_orientation='row'][1]" },
             { "Entity_SubGridList", "//div[@data-id='[NAME]-pcf_grid_control_container']//div[@data-id='grid-container']//div[@data-automationid='ListCell']" },
             { "Entity_SubGridListCells", ".//div[@class='ag-center-cols-viewport']//div[@role='rowgroup']//div[@row-index]" },
             { "Entity_SubGridViewPickerButton", ".//span[contains(@id, 'ViewSelector') and contains(@id, 'button')]" },
@@ -666,7 +677,7 @@ namespace TALXIS.TestKit.Selectors
             { "Dialog_Displayed", "//div[@role='dialog']" },
             { "Dialog_ButtonByLabel", ".//button[@title=[LABEL] or @aria-label=[LABEL]]" },
             { "Dialog_CloseButton", ".//button[@aria-label='Close' or @title='Close']" },
-            { "Dialog_TextOnPage", "//*[contains(text(), [LABEL])]" },
+            { "Dialog_Text", ".//*[contains(text(), [LABEL])]" },
             { "Dialog_ActualRevenue", "//input[contains(@data-id,'actualrevenue_id')]" },
             { "Dialog_CloseDate", "//input[contains(@data-id,'closedate_id')]" },
             { "Dialog_DescriptionId", "//input[contains(@data-id,'description_id')]" },
