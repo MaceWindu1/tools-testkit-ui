@@ -69,12 +69,21 @@ export default class DataManager {
         await this.getObjectIdForUser(opts.userToImpersonate),
       );
     }
-    const res = await this.deepInsertSvc.deepInsert(
-      logicalName,
-      this.preprocess(record),
-      this.refsByAlias,
-      opts?.userToImpersonate ? this.appUserRecordRepo : this.currentUserRecordRepo,
-    );
+    let res;
+    try {
+      res = await this.deepInsertSvc.deepInsert(
+        logicalName,
+        this.preprocess(record),
+        this.refsByAlias,
+        opts?.userToImpersonate ? this.appUserRecordRepo : this.currentUserRecordRepo,
+      );
+    } finally {
+      // The impersonation must not stick to the repository: the cleanup deletes the test data
+      // as the application user.
+      if (opts?.userToImpersonate) {
+        this.appUserRecordRepo?.clearImpersonatedUserId();
+      }
+    }
 
     const newRecords = [res.record, ...res.associatedRecords];
     this.refs.push(...newRecords.map((r) => r.reference));

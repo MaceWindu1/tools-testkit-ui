@@ -12,7 +12,7 @@ describe('TestDriver', () => {
       'CurrentUserRecordRepository', ['createRecord', 'deleteRecord', 'retrieveMultipleRecords'],
     );
     appUserRecordRepo = jasmine.createSpyObj<AuthenticatedRecordRepository>(
-      'AuthenticatedRecordRepository', ['createRecord', 'deleteRecord', 'setImpersonatedUserId'],
+      'AuthenticatedRecordRepository', ['createRecord', 'deleteRecord', 'setImpersonatedUserId', 'clearImpersonatedUserId'],
     );
     deepInsertService = jasmine.createSpyObj<DeepInsertService>('DeepInsertService', ['deepInsert']);
     dataManager = new DataManager(currentUserRecordRepo,
@@ -69,6 +69,17 @@ describe('TestDriver', () => {
       expect(deepInsertService.deepInsert).toHaveBeenCalledWith(
         jasmine.anything(), jasmine.anything(), jasmine.anything(), appUserRecordRepo,
       );
+    });
+
+    it('stops impersonating once the data is created, so that the cleanup deletes as the application user', async () => {
+      currentUserRecordRepo.retrieveMultipleRecords.and.resolveTo(
+        { entities: [{ azureactivedirectoryobjectid: 'user-id' }], nextLink: '' },
+      );
+      deepInsertService.deepInsert.and.rejectWith(new Error('The data could not be created.'));
+
+      await expectAsync(dataManager.createData('account', {}, { userToImpersonate: 'user-id' })).toBeRejected();
+
+      expect(appUserRecordRepo.clearImpersonatedUserId).toHaveBeenCalledWith();
     });
   });
 

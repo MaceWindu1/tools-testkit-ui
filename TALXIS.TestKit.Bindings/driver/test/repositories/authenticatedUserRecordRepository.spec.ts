@@ -35,6 +35,19 @@ describe('CurrentUserRecordRepository', () => {
     });
   });
 
+  describe('clearImpersonatedUserId()', () => {
+    it('removes the CallerObjectId header of requests', async () => {
+      const guid = 'bc148b3f-d7d7-4546-a3a8-d92ffd9a98c8';
+      fetchMock.mock('*', { headers: { 'OData-EntityId': `api/data/v9.1/accounts(${guid})` } });
+      recordRepo.setImpersonatedUserId(guid);
+      recordRepo.clearImpersonatedUserId();
+
+      await recordRepo.createRecord(logicalName, {});
+
+      expect(fetchMock.calls()[0][1].headers.CallerObjectId).toBeUndefined();
+    });
+  });
+
   describe('createRecord(entityLogicalName, record)', () => {
     it('returns a reference to the created record', async () => {
       const guid = 'bc148b3f-d7d7-4546-a3a8-d92ffd9a98c8';

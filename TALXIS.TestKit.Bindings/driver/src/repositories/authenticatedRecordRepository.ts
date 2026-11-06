@@ -59,6 +59,13 @@ export default class AuthenticatedRecordRepository implements RecordRepository {
   }
 
   /**
+   * Stops impersonating a user: requests are made as the application user again.
+   */
+  public clearImpersonatedUserId() {
+    delete this.headers.CallerObjectId;
+  }
+
+  /**
    * Retrieves a record.
    * @param logicalName The logical name of the record to retrieve.
    * @param id The ID of the record to retrieve.
