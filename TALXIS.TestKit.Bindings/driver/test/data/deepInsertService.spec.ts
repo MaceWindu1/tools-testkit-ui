@@ -117,7 +117,7 @@ describe('DeepInsertService', () => {
 
       const deepInsertPromise = deepInsertService.deepInsert('account', deepInsert, {});
 
-      expectAsync(deepInsertPromise).toBeRejectedWithError(Error, /.* record with the alias 'a contact' has not been created/);
+      await expectAsync(deepInsertPromise).toBeRejectedWithError(Error, /.* record with the alias 'a contact' has not been created/);
     });
 
     it('removes nested arrays from the record', async () => {
@@ -254,7 +254,7 @@ describe('DeepInsertService', () => {
     it('throws when the target entity can not be determined for a lookup record', async () => {
       metadataRepo.getTargetsForLookupProperty.and.resolveTo(['contact', 'account']);
 
-      expectAsync(deepInsertService.deepInsert('account',
+      await expectAsync(deepInsertService.deepInsert('account',
         {
           primarycontactid:
             {
@@ -262,7 +262,7 @@ describe('DeepInsertService', () => {
               lastname: 'Smith',
             },
         },
-        {})).toBeRejectedWithError('Unable to determine target entity for primarycontactid');
+        {})).toBeRejectedWithError('Unable to determine target entity for primarycontactid.');
     });
 
     it('correctly determines the target entity for customer fields', async () => {
