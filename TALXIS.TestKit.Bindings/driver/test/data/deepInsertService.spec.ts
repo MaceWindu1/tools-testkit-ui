@@ -348,7 +348,7 @@ describe('DeepInsertService', () => {
     });
 
     it('fallsback to @logicalName if targets are not found', async () => {
-      metadataRepo.getTargetsForLookupProperty.and.resolveTo(['contact']);
+      metadataRepo.getTargetsForLookupProperty.and.resolveTo(null);
       recordRepo.upsertRecord
         .and.returnValues(
           Promise.resolve({ id: '<contact-id>', entityType: 'contact' }),
@@ -367,6 +367,7 @@ describe('DeepInsertService', () => {
         {});
 
       expect(recordRepo.upsertRecord.calls.count()).toBe(2);
+      expect(recordRepo.upsertRecord.calls.first().args[0]).toBe('contact');
     });
   });
 });

@@ -1,9 +1,11 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: pull-request
+name: build-and-test
 
 on:
   pull_request:
+    branches: [master]
+  push:
     branches: [master]
 
 permissions:
@@ -20,6 +22,8 @@ defaults:
 jobs:
   build-and-test:
     runs-on: windows-latest
+    # A full run takes about 5 minutes; a hung browser should not hold the runner for hours.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
