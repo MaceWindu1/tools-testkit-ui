@@ -14,6 +14,10 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
 {
     internal class GetDataHelper
     {
+        // The form types of Xrm.Page.ui.getFormType().
+        private const long CreateFormType = 1;
+        private const long UpdateFormType = 2;
+
         internal static BrowserCommandResult<string> GetBusinessProcessErrorText(int waitTimeInSeconds, WebClient client)
         {
             return client.Execute(client.GetOptions($"Get Business Process Error Text"), driver =>
@@ -374,7 +378,9 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
                     driver.WaitForTransaction();
                     if (!driver.TryFindElement(By.Id("message-formReadOnlyNotification"), out var readOnlyNotification))
                     {
-                        return "Active";
+                        // A notification bar with several notifications hides the read-only one, so a form without it
+                        // only shows an active record when the record can be edited.
+                        return IsFormEditable(driver) ? "Active" : null;
                     }
 
                     var match = Regex.Match(readOnlyNotification.Text, "(?<=status:\\s)\\w+");
@@ -387,6 +393,15 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
                 });
 
             return result.Value;
+        }
+
+        // A create (1) or update (2) form; a read-only (3) or disabled (4) form shows a record that cannot be edited.
+        private static bool IsFormEditable(IWebDriver driver)
+        {
+            var formType = ((IJavaScriptExecutor)driver).ExecuteScript(
+                "return typeof Xrm !== 'undefined' && Xrm.Page.ui && Xrm.Page.ui.getFormType ? Xrm.Page.ui.getFormType() : 0;");
+
+            return formType is long type && (type == CreateFormType || type == UpdateFormType);
         }
     }
 }

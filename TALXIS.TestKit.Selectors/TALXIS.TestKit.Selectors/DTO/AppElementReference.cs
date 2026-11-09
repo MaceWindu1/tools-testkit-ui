@@ -596,8 +596,9 @@ namespace TALXIS.TestKit.Selectors
             { "Cmd_ContainerGrid"       , "//ul[contains(@data-lp-id,\"commandbar-HomePageGrid\")]"},
             { "Cmd_MoreCommandsMenu"       , "//*[@id=\"__flyoutRootNode\"]"},
             { "Cmd_Button", "//*[contains(text(),'[NAME]')]"},
-            // A sub command, listed in the flyout that its command opens.
-            { "Cmd_FlyoutCommand", "//*[@id=\"__flyoutRootNode\"]//button//span[text()=[NAME]]"},
+            // A sub command, listed in the flyout that its command opens; the last match is in the flyout opened last, e.g.
+            // from a command in the More commands list, which stays open.
+            { "Cmd_FlyoutCommand", "(//*[@id=\"__flyoutRootNode\"]//button//span[text()=[NAME]])[last()]"},
 
             //GlobalSearch
             { "Search_RelevanceSearchButton"       , "//div[@aria-label=\"Search box\"]//button" },

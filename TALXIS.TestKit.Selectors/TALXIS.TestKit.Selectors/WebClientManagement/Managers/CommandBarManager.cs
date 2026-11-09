@@ -9,9 +9,6 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 {
     public class CommandBarManager
     {
-        // A flyout renders its commands a moment after its command was clicked.
-        private static readonly TimeSpan FlyoutTimeout = TimeSpan.FromSeconds(5);
-
         public WebClient Client { get; }
 
         public CommandBarManager(WebClient client)
@@ -56,7 +53,10 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 
         private static void ClickFlyoutCommand(IWebDriver driver, string parent, string name)
         {
-            driver.WaitUntilAvailable(CommandBarElementsLocators.FlyoutCommand(name), FlyoutTimeout, $"No command with the name '{name}' exists under '{parent}' in the CommandBar.")
+            // A flyout can load its commands from the server (e.g. flows, reports or templates).
+            driver.WaitUntilAvailable(
+                CommandBarElementsLocators.FlyoutCommand(name),
+                $"No command with the name '{name}' exists under '{parent}' in the CommandBar, or the flyout of '{parent}' did not open.")
                 .Click(true);
             driver.WaitForTransaction();
         }
