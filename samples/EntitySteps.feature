@@ -48,9 +48,9 @@ Scenario: Enter multiple values on a form
 
 Scenario: Clear lookup value
 	Given I have created 'a secondary mock record'
-	When I enter 'A secondary mock record' into the 'Lookup' lookup field on the form
+	When I enter 'A secondary mock record' into the 'Lookup' field on the form
 	And I clear the 'Lookup' lookup field
-	Then I should be able to see a value of '' in the 'Lookup' lookup field
+	Then I should be able to see a value of '' in the 'Lookup' field
 
 Scenario: Delete a record
 	Given I have created 'a secondary mock record'
@@ -144,8 +144,8 @@ Scenario: Assert record status
 	Then the status of the record should be active
 
 Scenario: Assert business process error message
-	When I enter 'Some text' into the 'Name' text field on the form
-	And I enter 'true' into the 'sb_triggerbusinessprocesserror' boolean field on the form
+	When I enter 'Some text' into the 'Name' field on the form
+	And I enter 'true' into the 'sb_triggerbusinessprocesserror' field on the form
 	And I save the record
 	Then I should be able to see a business process error stating 'Mock business process error'
 

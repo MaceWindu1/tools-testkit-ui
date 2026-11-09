@@ -14,6 +14,7 @@ A huge thank you to Capgemini and, in particular, to [Max Ewing](https://github.
   - [Configuration](#Configuration)
   - [Writing feature files](#Writing-feature-files)
   - [Writing step bindings](#Writing-step-bindings)
+  - [Checking feature files](#Checking-feature-files)
   - [Test setup](#Test-setup)
     - [Bindings](#Bindings)
     - [Data file syntax](#Data-file-syntax)
@@ -222,6 +223,47 @@ public static void ThenTheFieldShouldBeMandatory(string field, string requiremen
     App.Entity.IsFieldRequired(field, requirementLevel == "mandatory").Should().BeTrue();
 }
 ```
+
+### Checking feature files
+
+Reqnroll matches a step only to a binding of its keyword, and `And` and `But` take the keyword of the step before them:
+after `Given I have opened 'a record'`, `And I select the 'Details' tab` does not match the
+`When I select the '(.*)' tab` binding. By default, Reqnroll does not fail a scenario with a step that matches no
+binding; it reports the scenario as pending (skipped or inconclusive in the test results), so a test run can look
+green while such scenarios never ran. Make them fail in _reqnroll.json_:
+
+```json
+{
+  "runtime": {
+    "missingOrPendingStepsOutcome": "Error"
+  }
+}
+```
+
+To find these steps without a browser or an environment, before a test run, add a test that checks the feature files
+with `FeatureFileCheck`. It lists each step that matches no binding or more than one, and the binding a step would
+match with another keyword.
+
+```csharp
+[TestMethod]
+public void EveryStepMatchesOneBinding()
+{
+    var featureFiles = Directory.EnumerateFiles(FeatureFolder, "*.feature", SearchOption.AllDirectories);
+
+    var problems = FeatureFileCheck.FindStepsWithoutOneBinding(
+        featureFiles,
+        new[] { typeof(MyCustomSteps).Assembly, typeof(PowerAppsStepDefiner).Assembly });
+
+    Assert.AreEqual(0, problems.Count, string.Join(Environment.NewLine, problems));
+}
+```
+
+`FeatureFolder` is the folder of your feature files (e.g. the project folder, found by going up from
+`AppContext.BaseDirectory`). Pass the assemblies with your step bindings and those that _reqnroll.json_ lists.
+
+Reqnroll runs its `[BeforeTestRun]` hooks before any test of a Reqnroll test project, this one too: with `useProfiles`,
+the users sign in first. To run the check alone without signing in, set the `UseProfiles` environment variable to
+`false`, e.g. `$env:UseProfiles = 'false'; dotnet test --filter EveryStepMatchesOneBinding`.
 
 ### Test setup
 
