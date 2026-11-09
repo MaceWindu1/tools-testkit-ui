@@ -20,6 +20,7 @@
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <param name="recordId">The ID of the record.</param>
         /// <returns>The index of the record.</returns>
+        [Obsolete("Use SubGrid.GetRecordIndexById(subGridName, recordId).")]
         public static int GetRecordIndexById(this SubGrid subGrid, string subgridName, IWebDriver driver, Guid recordId)
         {
             subGrid = subGrid ?? throw new ArgumentNullException(nameof(subGrid));
@@ -35,6 +36,7 @@
         /// <param name="subgridName">The name of the subgrid.</param>
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <param name="index">The index of the record.</param>
+        [Obsolete("Use SubGrid.HighlightRecord(subGridName, index).")]
         public static void HighlightRecord(this SubGrid subGrid, string subgridName, IWebDriver driver, int index)
         {
             subGrid = subGrid ?? throw new ArgumentNullException(nameof(subGrid));

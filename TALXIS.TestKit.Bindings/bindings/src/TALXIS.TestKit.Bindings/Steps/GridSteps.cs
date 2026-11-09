@@ -70,7 +70,7 @@
         {
             var index = GetGridItemIndexByAlias(recordAlias);
 
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid.");
+            index.HasValue.Should().BeTrue(because: $"'{recordAlias}' should be in the grid");
         }
 
         /// <summary>
@@ -106,7 +106,7 @@
         private static void HighlightRowByAlias(string alias)
         {
             var index = GetGridItemIndexByAlias(alias);
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid.");
+            index.HasValue.Should().BeTrue(because: $"'{alias}' should be in the grid");
 
             XrmApp.Grid.HighLightRecord(index.Value);
         }

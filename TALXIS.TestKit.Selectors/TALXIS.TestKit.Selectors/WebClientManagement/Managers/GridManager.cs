@@ -469,7 +469,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         {
             return Client.Execute(Client.GetNoRetryOptions($"Get Grid Record Index: {recordId}"), driver =>
             {
-                driver.WaitUntilAvailable(GridElementsLocators.Container);
+                driver.WaitUntilAvailable(GridElementsLocators.Container, "Could not find the grid.");
 
                 // The app's grid state has the records by their ids.
                 var index = (long)((IJavaScriptExecutor)driver).ExecuteScript(

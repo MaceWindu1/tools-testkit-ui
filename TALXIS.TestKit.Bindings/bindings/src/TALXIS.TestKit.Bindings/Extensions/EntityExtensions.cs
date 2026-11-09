@@ -16,6 +16,7 @@
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <param name="fieldName">The name of the field.</param>
         /// <returns>Whether the field is visible.</returns>
+        [Obsolete("Use Entity.IsFieldVisible(fieldName).")]
         public static bool IsFieldVisible(this Entity entity, IWebDriver driver, string fieldName)
         {
             entity = entity ?? throw new ArgumentNullException(nameof(entity));
@@ -30,6 +31,7 @@
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <param name="fieldLabel">The label of the field.</param>
         /// <returns>Logical name of the field.</returns>
+        [Obsolete("Use Entity.GetFieldLogicalNameFromLabel(fieldLabel).")]
         public static string GetFieldLogicalNameFromLabel(this Entity entity, IWebDriver driver, string fieldLabel)
         {
             entity = entity ?? throw new ArgumentNullException(nameof(entity));
@@ -44,6 +46,7 @@
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <param name="sectionName">The name of the section.</param>
         /// <returns>Whether the section is visible.</returns>
+        [Obsolete("Use Entity.IsSectionVisible(sectionName).")]
         public static bool IsSectionVisible(this Entity entity, IWebDriver driver, string sectionName)
         {
             entity = entity ?? throw new ArgumentNullException(nameof(entity));

@@ -2095,7 +2095,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         /// <returns>The index, or -1 when the subgrid does not show the record.</returns>
         internal static int GetSubGridRecordIndexById(IWebDriver driver, string subGridName, Guid recordId)
         {
-            driver.WaitUntilAvailable(EntityElementsLocators.SubGridContents(subGridName));
+            driver.WaitUntilAvailable(EntityElementsLocators.SubGridContents(subGridName), $"Could not find the {subGridName} subgrid.");
 
             var index = (long)((IJavaScriptExecutor)driver).ExecuteScript(
                 "return Xrm.Page.getControl(arguments[0]).getGrid().getRows().get().findIndex(row => row.getData().getEntity().getId() == arguments[1]);",
@@ -2111,7 +2111,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         /// <returns>The index, or -1 when no record of the subgrid references the record in the lookup.</returns>
         internal static int GetSubGridRecordIndexByLookup(IWebDriver driver, string subGridName, string lookup, Guid recordId)
         {
-            driver.WaitUntilAvailable(EntityElementsLocators.SubGridContents(subGridName));
+            driver.WaitUntilAvailable(EntityElementsLocators.SubGridContents(subGridName), $"Could not find the {subGridName} subgrid.");
 
             var index = (long)((IJavaScriptExecutor)driver).ExecuteScript(
                 @"const [subGridName, lookup, id] = arguments;

@@ -17,6 +17,7 @@
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <param name="recordId">The ID of the record.</param>
         /// <returns>The index of the record.</returns>
+        [Obsolete("Use Grid.GetRecordIndexById(recordId), which returns -1 when the grid does not show the record.")]
         public static int GetRecordIndexById(this Grid grid, IWebDriver driver, Guid recordId)
         {
             grid = grid ?? throw new ArgumentNullException(nameof(grid));

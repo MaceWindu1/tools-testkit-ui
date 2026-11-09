@@ -3,7 +3,6 @@ namespace TALXIS.TestKit.Bindings.Tests
     using System;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using OpenQA.Selenium;
-    using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors;
     using TALXIS.TestKit.Selectors.WebClientManagement;
 
@@ -114,20 +113,20 @@ namespace TALXIS.TestKit.Bindings.Tests
         [TestMethod]
         public void TellsWhetherASectionIsShown()
         {
-            Assert.IsTrue(this.xrmApp.Entity.IsSectionVisible(this.driver, "details_section"));
-            Assert.IsFalse(this.xrmApp.Entity.IsSectionVisible(this.driver, "missing_section"));
+            Assert.IsTrue(this.xrmApp.Entity.IsSectionVisible("details_section"));
+            Assert.IsFalse(this.xrmApp.Entity.IsSectionVisible("missing_section"));
         }
 
         [TestMethod]
         public void TellsWhetherTheNewLookIsOn()
         {
-            Assert.IsTrue(AppLookExtensions.IsNewLookEnabled(this.driver));
+            Assert.IsTrue(NavigationManager.IsNewLookEnabled(this.driver));
 
             ((IJavaScriptExecutor)this.driver).ExecuteScript("document.querySelector('button.ms-Toggle-background').setAttribute('aria-checked', 'false');");
-            Assert.IsFalse(AppLookExtensions.IsNewLookEnabled(this.driver));
+            Assert.IsFalse(NavigationManager.IsNewLookEnabled(this.driver));
 
             ((IJavaScriptExecutor)this.driver).ExecuteScript("document.querySelector('button.ms-Toggle-background').remove();");
-            Assert.IsTrue(AppLookExtensions.IsNewLookEnabled(this.driver), "An app without the toggle has only the new look.");
+            Assert.IsTrue(NavigationManager.IsNewLookEnabled(this.driver), "An app without the toggle has only the new look.");
         }
     }
 }

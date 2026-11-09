@@ -31,7 +31,7 @@
         {
             Driver.WaitForPageToLoad();
 
-            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
+            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(fieldLabel);
             string fieldType = MetadataHelper.GetFieldTypeFromDomByLogicalName(fieldLogicalName);
 
             SetFieldValue(fieldLogicalName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), fieldType);
@@ -81,7 +81,7 @@
         [When(@"I clear the '(.*)' (?:currency|numeric|text|datetime|boolean) field on the quick create")]
         public static void WhenIClearTheFieldOnTheQuickCreate(string fieldLabel)
         {
-            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
+            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(fieldLabel);
             XrmApp.QuickCreate.ClearValue(fieldLogicalName);
         }
 

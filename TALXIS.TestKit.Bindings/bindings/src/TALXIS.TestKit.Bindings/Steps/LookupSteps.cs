@@ -6,7 +6,6 @@
     using OpenQA.Selenium;
     using OpenQA.Selenium.Support.UI;
     using Reqnroll;
-    using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors;
     using TALXIS.TestKit.Selectors.Browser;
     using static TALXIS.TestKit.Selectors.AppReference;
@@ -106,7 +105,7 @@
         [When(@"I select a related '(.*)' lookup field")]
         public static void WhenISelectARelatedLookupInTheForm(string lookupLabel)
         {
-            string lookupLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, lookupLabel);
+            string lookupLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(lookupLabel);
             XrmApp.Lookup.SelectRelatedLookupRecord(lookupLogicalName);
         }
 
