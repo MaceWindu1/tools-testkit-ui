@@ -6,11 +6,14 @@ namespace TALXIS.TestKit.Bindings.Authoring
     using System.Linq;
     using System.Reflection;
     using System.Text.RegularExpressions;
+    using CucumberExpressions;
     using Gherkin;
     using Gherkin.Ast;
     using Reqnroll;
     using Reqnroll.Bindings;
     using Reqnroll.Bindings.CucumberExpressions;
+    using Reqnroll.Bindings.Reflection;
+    using Reqnroll.Configuration;
 
     /// <summary>
     /// Checks feature files against the step bindings without a browser or an environment. A step that matches no binding
@@ -18,19 +21,26 @@ namespace TALXIS.TestKit.Bindings.Authoring
     /// </summary>
     public static class FeatureFileCheck
     {
+        private const BindingFlags StepMethods = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+
         private static readonly Regex Placeholder = new Regex("<([^<>]+)>");
         private static readonly IReadOnlyDictionary<string, string> NoExamplesRow = new Dictionary<string, string>();
 
         /// <summary>
         /// Finds the steps that match no step binding or more than one. The steps are matched as Reqnroll matches them: by
-        /// their keyword ('And' and 'But' take the previous step's), with the values of each Examples row filled in, and
-        /// against the binding's regular expression or Cucumber expression. Scoped bindings are matched as unscoped ones.
+        /// their keyword ('And' and 'But' take the previous step's), with the values of each Examples row filled in,
+        /// against the binding's regular expression, Cucumber expression (with the parameter types of step argument
+        /// transformations and enums) or method name, and to a binding whose method takes the step's arguments. Scoped
+        /// bindings ([Scope]) are matched as unscoped ones.
         /// </summary>
         /// <param name="featureFiles">The paths of the feature files.</param>
         /// <param name="bindingAssemblies">The assemblies with step bindings: the test project's and those that reqnroll.json
         /// lists (such as TALXIS.TestKit.Bindings).</param>
-        /// <returns>One line per such step: where it is, its text and the bindings it matches.</returns>
-        public static IReadOnlyList<string> FindStepsWithoutOneBinding(IEnumerable<string> featureFiles, IEnumerable<Assembly> bindingAssemblies)
+        /// <param name="featureLanguage">The language of feature files without a '# language:' line (reqnroll.json's
+        /// language.feature).</param>
+        /// <returns>One line per binding that Reqnroll cannot use and per such step: where it is, its text and the
+        /// bindings it matches.</returns>
+        public static IReadOnlyList<string> FindStepsWithoutOneBinding(IEnumerable<string> featureFiles, IEnumerable<Assembly> bindingAssemblies, string featureLanguage = "en")
         {
             if (featureFiles == null)
             {
@@ -42,16 +52,47 @@ namespace TALXIS.TestKit.Bindings.Authoring
                 throw new ArgumentNullException(nameof(bindingAssemblies));
             }
 
-            var bindings = LoadBindings(bindingAssemblies);
-            return featureFiles
-                .SelectMany(StepsOf)
-                .Select(step => (step, matches: bindings.Where(binding => binding.Matches(step)).Select(binding => binding.Method).Distinct().ToList()))
-                .Where(check => check.matches.Count != 1)
-                .Select(check => check.matches.Count == 0
-                    ? NoBindingFor(check.step, bindings)
-                    : $"{check.step.Location}: '{check.step.Text}' matches {string.Join(", ", check.matches.Select(NameOf))}")
-                .Distinct()
-                .ToList();
+            // A wrong folder would otherwise pass the check without checking anything.
+            var files = featureFiles.ToList();
+            if (files.Count == 0)
+            {
+                throw new ArgumentException("There are no feature files to check.", nameof(featureFiles));
+            }
+
+            var problems = new List<string>();
+            var bindings = LoadBindings(bindingAssemblies.ToList(), problems);
+            problems.AddRange(files
+                .SelectMany(file => StepsOf(file, featureLanguage))
+                .Select(step => ProblemOf(step, bindings))
+                .Where(problem => problem != null));
+
+            return problems.Distinct().ToList();
+        }
+
+        // As in Reqnroll: the bindings of the step's keyword whose expression matches its text, of which the one whose
+        // method takes the step's arguments (the expression's values, and its data table or doc string) runs.
+        private static string ProblemOf(ScenarioStep step, IReadOnlyList<StepBinding> bindings)
+        {
+            var matching = bindings.Where(binding => binding.Type == step.Type && binding.Regex.IsMatch(step.Text)).ToList();
+            var fitting = matching.Where(binding => binding.Takes(step)).Select(binding => binding.Method).Distinct().ToList();
+
+            if (fitting.Count == 1)
+            {
+                return null;
+            }
+
+            if (fitting.Count > 1)
+            {
+                return $"{step.Location}: '{step.Text}' matches {string.Join(", ", fitting.Select(NameOf))}";
+            }
+
+            if (matching.Count > 0)
+            {
+                var takes = matching.Select(binding => binding.Method).Distinct().Select(method => $"{NameOf(method)} takes {method.GetParameters().Length}");
+                return $"{step.Location}: '{step.Text}' gives {matching[0].ArgumentsOf(step)} argument(s), but {string.Join(", ", takes)}";
+            }
+
+            return NoBindingFor(step, bindings);
         }
 
         // Reqnroll matches a step only to a binding of its keyword: 'Given ... And I select the tab' does not run a
@@ -61,36 +102,97 @@ namespace TALXIS.TestKit.Bindings.Authoring
             var otherKeywords = bindings.Where(binding => binding.Regex.IsMatch(step.Text)).ToList();
             return otherKeywords.Count == 0
                 ? $"{step.Location}: no binding for '{step.Text}'"
-                : $"{step.Location}: no {step.Type} binding for '{step.Text}'; it matches {string.Join(", ", otherKeywords.Select(binding => $"{NameOf(binding.Method)} ({string.Join("/", binding.Types)})").Distinct())}";
+                : $"{step.Location}: no {step.Type} binding for '{step.Text}'; it matches {string.Join(", ", otherKeywords.Select(binding => $"{NameOf(binding.Method)} ({binding.Type})").Distinct())}";
         }
 
-        private static string NameOf(MethodInfo method) => $"{method.DeclaringType.Name}.{method.Name}";
+        // A binding class has the step methods it declares and those it inherits.
+        private static string NameOf(MethodInfo method) => $"{method.ReflectedType.Name}.{method.Name}";
 
-        private static List<StepBinding> LoadBindings(IEnumerable<Assembly> assemblies)
+        // The step bindings as Reqnroll builds them from the binding classes.
+        private static List<StepBinding> LoadBindings(IReadOnlyList<Assembly> assemblies, List<string> problems)
         {
-            return assemblies
+            var methods = assemblies
                 .SelectMany(assembly => assembly.GetTypes())
                 .Where(type => type.IsDefined(typeof(BindingAttribute), inherit: true))
-                .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
-                .SelectMany(method => method.GetCustomAttributes<StepDefinitionBaseAttribute>().Select(attribute => new StepBinding(method, RegexOf(attribute.Regex), attribute.Types)))
+                .SelectMany(type => type.GetMethods(StepMethods))
                 .ToList();
+            var stepMethods = methods.Where(method => method.IsDefined(typeof(StepDefinitionBaseAttribute), inherit: true)).ToList();
+            var parameterTypes = ParameterTypesOf(methods, stepMethods);
+            var methodNames = new StepDefinitionRegexCalculator(ConfigurationLoader.GetDefault());
+
+            var bindings = new List<StepBinding>();
+            foreach (var method in stepMethods)
+            {
+                foreach (var attribute in method.GetCustomAttributes<StepDefinitionBaseAttribute>())
+                {
+                    foreach (var type in attribute.Types)
+                    {
+                        try
+                        {
+                            bindings.Add(new StepBinding(method, type, RegexOf(attribute.Regex, type, method, parameterTypes, methodNames)));
+                        }
+                        catch (Exception e) when (e is CucumberExpressionException || e is ArgumentException)
+                        {
+                            // Reqnroll fails the steps of a binding whose expression it cannot read.
+                            problems.Add($"{NameOf(method)}: {e.Message.Split('\n')[0].Trim()}");
+                        }
+                    }
+                }
+            }
+
+            return bindings;
+        }
+
+        // The parameter types of Cucumber expressions: the built-in ones, those of the step argument transformations, and
+        // the enums that step methods take, which have to be known before the first expression is read.
+        private static CucumberExpressionParameterTypeRegistry ParameterTypesOf(IEnumerable<MethodInfo> methods, IEnumerable<MethodInfo> stepMethods)
+        {
+            var registry = new BindingRegistry();
+            foreach (var method in methods)
+            {
+                foreach (var attribute in method.GetCustomAttributes<StepArgumentTransformationAttribute>())
+                {
+                    registry.RegisterStepArgumentTransformationBinding(new StepArgumentTransformationBinding(attribute.Regex, new RuntimeBindingMethod(method), attribute.Name));
+                }
+            }
+
+            var parameterTypes = new CucumberExpressionParameterTypeRegistry(registry);
+            foreach (var method in stepMethods)
+            {
+                parameterTypes.OnBindingMethodProcessed(new RuntimeBindingMethod(method));
+            }
+
+            return parameterTypes;
         }
 
         // Reqnroll reads an expression without '^' or '$' and without the regex syntax it recognizes (such as '(.*)') as a
-        // Cucumber expression, in which '(confirm|cancel)' is optional literal text, not a choice.
-        private static Regex RegexOf(string expression)
+        // Cucumber expression, in which '(confirm|cancel)' is optional literal text, not a choice. A binding without an
+        // expression matches its method's name.
+        private static Regex RegexOf(string expression, StepDefinitionType type, MethodInfo method, CucumberExpressionParameterTypeRegistry parameterTypes, StepDefinitionRegexCalculator methodNames)
         {
+            if (expression == null)
+            {
+                return new Regex(methodNames.CalculateRegexFromMethod(type, new RuntimeBindingMethod(method)), RegexOptions.CultureInvariant);
+            }
+
             return new CucumberExpressionDetector().IsCucumberExpression(expression)
-                ? new ReqnrollCucumberExpression(expression, new CucumberExpressionParameterTypeRegistry(new BindingRegistry())).Regex
+                ? new ReqnrollCucumberExpression(expression, parameterTypes).Regex
                 : new Regex($"^{expression}$", RegexOptions.CultureInvariant);
         }
 
-        private static IEnumerable<ScenarioStep> StepsOf(string featureFile)
+        private static IEnumerable<ScenarioStep> StepsOf(string featureFile, string featureLanguage)
         {
             Feature feature;
-            using (var reader = new StreamReader(featureFile))
+            try
             {
-                feature = new Parser().Parse(reader).Feature;
+                using (var reader = new StreamReader(featureFile))
+                {
+                    feature = new Parser().Parse(new TokenScanner(reader), new TokenMatcher(featureLanguage)).Feature;
+                }
+            }
+            catch (ParserException e)
+            {
+                throw new FormatException($"{featureFile}: {e.Message}", e);
             }
 
             // A file without a feature (e.g. empty) has no steps.
@@ -144,15 +246,18 @@ namespace TALXIS.TestKit.Bindings.Authoring
                     _ => type,
                 };
                 var text = Placeholder.Replace(step.Text, match => row.TryGetValue(match.Groups[1].Value, out var value) ? value : match.Value);
-                yield return new ScenarioStep($"{featureFile}:{step.Location.Line}", type, text);
+                yield return new ScenarioStep($"{featureFile}:{step.Location.Line}", type, text, step.Argument != null);
             }
         }
 
-        private sealed record ScenarioStep(string Location, StepDefinitionType Type, string Text);
+        private sealed record ScenarioStep(string Location, StepDefinitionType Type, string Text, bool HasArgument);
 
-        private sealed record StepBinding(MethodInfo Method, Regex Regex, StepDefinitionType[] Types)
+        private sealed record StepBinding(MethodInfo Method, StepDefinitionType Type, Regex Regex)
         {
-            public bool Matches(ScenarioStep step) => this.Types.Contains(step.Type) && this.Regex.IsMatch(step.Text);
+            // The values the expression matches in the step's text, and the step's data table or doc string.
+            public int ArgumentsOf(ScenarioStep step) => this.Regex.Match(step.Text).Groups.Count - 1 + (step.HasArgument ? 1 : 0);
+
+            public bool Takes(ScenarioStep step) => this.ArgumentsOf(step) == this.Method.GetParameters().Length;
         }
     }
 }

@@ -241,8 +241,11 @@ green while such scenarios never ran. Make them fail in _reqnroll.json_:
 ```
 
 To find these steps without a browser or an environment, before a test run, add a test that checks the feature files
-with `FeatureFileCheck`. It lists each step that matches no binding or more than one, and the binding a step would
-match with another keyword.
+with `FeatureFileCheck`. It matches each step as Reqnroll does (by its keyword, with each Examples row's values, to the
+binding's regular expression, Cucumber expression or method name, and to a binding whose method takes the step's
+arguments, including a data table or doc string) and lists each step that matches no binding or more than one, the
+binding a step would match with another keyword, and each binding whose expression Reqnroll cannot read. Scoped
+bindings (`[Scope]`) are matched as unscoped ones.
 
 ```csharp
 [TestMethod]
@@ -259,7 +262,9 @@ public void EveryStepMatchesOneBinding()
 ```
 
 `FeatureFolder` is the folder of your feature files (e.g. the project folder, found by going up from
-`AppContext.BaseDirectory`). Pass the assemblies with your step bindings and those that _reqnroll.json_ lists.
+`AppContext.BaseDirectory`); the check fails when it is given no feature files. Pass the assemblies with your step
+bindings and those that _reqnroll.json_ lists, and, when _reqnroll.json_ sets another `language.feature`, that language
+(`featureLanguage: "de"`).
 
 Reqnroll runs its `[BeforeTestRun]` hooks before any test of a Reqnroll test project, this one too: with `useProfiles`,
 the users sign in first. To run the check alone without signing in, set the `UseProfiles` environment variable to
