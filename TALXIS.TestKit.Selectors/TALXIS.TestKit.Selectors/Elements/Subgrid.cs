@@ -63,6 +63,15 @@ namespace TALXIS.TestKit.Selectors
         public int GetRecordIndexById(string subGridName, Guid recordId) => _entityManager.GetSubGridRecordIndexById(subGridName, recordId);
 
         /// <summary>
+        /// Gets the index of the first record in a subgrid whose lookup references a record.
+        /// </summary>
+        /// <param name="subGridName">The name of the subgrid.</param>
+        /// <param name="lookup">The logical name of the lookup column.</param>
+        /// <param name="recordId">The id of the referenced record.</param>
+        /// <returns>The index, or -1 when no record of the subgrid references the record in the lookup.</returns>
+        public int GetRecordIndexByLookup(string subGridName, string lookup, Guid recordId) => _entityManager.GetSubGridRecordIndexByLookup(subGridName, lookup, recordId);
+
+        /// <summary>
         /// Selects the record at an index of a subgrid.
         /// </summary>
         public void HighlightRecord(string subGridName, int index) => _entityManager.HighlightSubGridRecord(subGridName, index);

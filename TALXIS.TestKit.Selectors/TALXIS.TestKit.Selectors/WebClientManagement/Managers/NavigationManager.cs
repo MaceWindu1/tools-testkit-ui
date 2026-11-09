@@ -17,6 +17,16 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             Client = client ?? throw new ArgumentNullException(nameof(client)); ;
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the app shows the new look: its toggle is on, or the app has no toggle (only the
+        /// new look).
+        /// </summary>
+        public static bool IsNewLookEnabled(IWebDriver driver)
+        {
+            var toggle = driver.FindElements(NavigationElementsLocator.NewLookToggle).FirstOrDefault();
+            return toggle == null || toggle.GetAttribute("aria-checked") == "true";
+        }
+
         public static Dictionary<string, IWebElement> GetSubAreaMenuItems(IWebDriver driver)
         {
             var dictionary = new Dictionary<string, IWebElement>();

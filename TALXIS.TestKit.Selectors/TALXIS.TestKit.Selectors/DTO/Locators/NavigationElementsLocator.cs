@@ -10,6 +10,7 @@ namespace TALXIS.TestKit.Selectors.DTO.Locators
     internal class NavigationElementsLocator
     {
         internal static By AreaButton => By.XPath(AppElements.Xpath[AppReference.Navigation.AreaButton]);
+        internal static By NewLookToggle => By.XPath(AppElements.Xpath[AppReference.Navigation.NewLookToggle]);
         internal static By AreaMenu => By.XPath(AppElements.Xpath[AppReference.Navigation.AreaMenu]);
         internal static By AreaMoreMenu => By.XPath(AppElements.Xpath[AppReference.Navigation.AreaMoreMenu]);
         internal static By SubAreaContainer => By.XPath(AppElements.Xpath[AppReference.Navigation.SubAreaContainer]);

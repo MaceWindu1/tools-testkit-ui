@@ -46,11 +46,8 @@
         /// <returns>Whether the section is visible.</returns>
         public static bool IsSectionVisible(this Entity entity, IWebDriver driver, string sectionName)
         {
-            driver = driver ?? throw new ArgumentNullException(nameof(driver));
-
-            var elements = driver.FindElements(By.CssSelector($"*[data-id={sectionName}]"));
-
-            return elements.Count > 0;
+            entity = entity ?? throw new ArgumentNullException(nameof(entity));
+            return entity.IsSectionVisible(sectionName);
         }
     }
 }

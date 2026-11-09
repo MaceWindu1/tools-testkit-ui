@@ -1962,6 +1962,9 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         internal int GetSubGridRecordIndexById(string subGridName, Guid recordId) =>
             Client.Execute(Client.GetNoRetryOptions($"Get Subgrid Record Index: {subGridName}"), driver => GetSubGridRecordIndexById(driver, subGridName, recordId)).Value;
 
+        internal int GetSubGridRecordIndexByLookup(string subGridName, string lookup, Guid recordId) =>
+            Client.Execute(Client.GetNoRetryOptions($"Get Subgrid Record Index By Lookup: {subGridName}"), driver => GetSubGridRecordIndexByLookup(driver, subGridName, lookup, recordId)).Value;
+
         internal bool HighlightSubGridRecord(string subGridName, int index) =>
             Client.Execute(Client.GetNoRetryOptions($"Highlight Subgrid Record: {subGridName}"), driver => HighlightSubGridRecord(driver, subGridName, index)).Value;
 
@@ -2097,6 +2100,25 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             var index = (long)((IJavaScriptExecutor)driver).ExecuteScript(
                 "return Xrm.Page.getControl(arguments[0]).getGrid().getRows().get().findIndex(row => row.getData().getEntity().getId() == arguments[1]);",
                 subGridName,
+                recordId.ToString("B").ToUpperInvariant());
+
+            return Convert.ToInt32(index);
+        }
+
+        /// <summary>
+        /// Gets the index of the first record in a subgrid whose lookup references a record.
+        /// </summary>
+        /// <returns>The index, or -1 when no record of the subgrid references the record in the lookup.</returns>
+        internal static int GetSubGridRecordIndexByLookup(IWebDriver driver, string subGridName, string lookup, Guid recordId)
+        {
+            driver.WaitUntilAvailable(EntityElementsLocators.SubGridContents(subGridName));
+
+            var index = (long)((IJavaScriptExecutor)driver).ExecuteScript(
+                @"const [subGridName, lookup, id] = arguments;
+                  return Xrm.Page.getControl(subGridName).getGrid().getRows().get().findIndex(row =>
+                      row.getData().getEntity().attributes.get().some(a => a.getName() === lookup && a.getValue() && a.getValue()[0].id === id));",
+                subGridName,
+                lookup,
                 recordId.ToString("B").ToUpperInvariant());
 
             return Convert.ToInt32(index);

@@ -10,6 +10,12 @@
 <div data-id="talxis_number"><label>Number</label><input value="C0001" readonly></div>
 <div data-id="talxis_number-locked-iconWrapper"></div>
 
+<!-- A form section, the main grid (its records are in the app's grid state, see getCurrentXrmStatus) and the toggle of the
+     new look, which is on. -->
+<section data-id="details_section"></section>
+<div data-id="data-set-body-container"></div>
+<button class="ms-Toggle-background" aria-checked="true"></button>
+
 <!-- A subgrid whose command bar shows a command enabled and one disabled (greyed out by its enable rule). -->
 <div id="dataSetRoot_Contacts">
   <ul data-id="Contacts-CommandBar">
@@ -53,6 +59,24 @@
       ui: { controls: { get: matches => controls.filter(matches) } },
     },
   };
+
+  // The records of the main grid by their ids, in the app's grid state.
+  window.getCurrentXrmStatus = () => ({
+    mainGrid: {
+      _grid: {
+        getRows: () => ({ _collection: { 'a1b2c3d4-0000-0000-0000-000000000001': {}, 'a1b2c3d4-0000-0000-0000-000000000002': {} } }),
+      },
+    },
+  });
+
+  // The rows of the Contacts subgrid: a contact without an account and one of the first account.
+  function contact(account) {
+    const attributes = [attribute('fullname', 'A contact'), attribute('parentcustomerid', account ? [{ id: account, entityType: 'account' }] : null)];
+    return { getData: () => ({ getEntity: () => ({ attributes: { get: () => attributes } }) }) };
+  }
+
+  const contacts = [contact(null), contact('{A1B2C3D4-0000-0000-0000-000000000001}')];
+  window.Xrm.Page.getControl = name => name === 'Contacts' ? { getGrid: () => ({ getRows: () => ({ get: () => contacts }) }) } : null;
 </script>
 </body>
 </html>

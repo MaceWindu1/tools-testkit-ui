@@ -3,7 +3,6 @@
     using System;
     using System.Globalization;
     using FluentAssertions;
-    using OpenQA.Selenium;
     using Reqnroll;
     using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors;
@@ -76,7 +75,7 @@
             SetFieldValue(fieldName, fieldValue);
 
             // Click to lose focus - So that business rules and other form events can occur
-            Driver.FindElement(By.XPath("html")).Click();
+            Client.TryLoseFocus();
 
             Driver.WaitForTransaction();
         }
