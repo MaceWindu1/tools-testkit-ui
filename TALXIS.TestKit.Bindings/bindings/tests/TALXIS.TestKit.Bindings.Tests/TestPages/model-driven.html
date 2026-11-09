@@ -18,12 +18,28 @@
   </ul>
 </div>
 
+<!-- A form command bar with a command that lists its sub commands in the flyout root once it is clicked, after a moment.
+     The page records the clicked sub command in the body's data-clicked attribute. -->
+<ul data-lp-id="commandbar-Form:account">
+  <li><button aria-label="Flow" onclick="openFlyout()"><span>Flow</span></button></li>
+</ul>
+<div id="__flyoutRootNode"></div>
+
 <!-- Text behind the dialogs, a dialog and a dialog opened from it (topmost, later in the page). -->
 <p>Summary</p>
 <div role="dialog"><h1>Wizard</h1><p>Step 1</p><button title="Next">Next</button></div>
 <div role="dialog"><h1>Confirm</h1><p>Leave the wizard?</p><button title="Leave">Leave</button></div>
 
 <script>
+  function openFlyout() {
+    setTimeout(() => {
+      const button = document.createElement('button');
+      button.innerHTML = '<span>Run a flow</span>';
+      button.onclick = () => { document.body.dataset.clicked = 'Run a flow'; };
+      document.getElementById('__flyoutRootNode').append(button);
+    }, 300);
+  }
+
   function attribute(name, value) { return { getName: () => name, getValue: () => value }; }
   function control(label, attribute) { return { getLabel: () => label, getAttribute: () => attribute }; }
 

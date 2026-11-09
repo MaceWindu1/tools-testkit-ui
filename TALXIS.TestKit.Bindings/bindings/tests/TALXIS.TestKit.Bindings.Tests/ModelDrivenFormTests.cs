@@ -10,13 +10,15 @@ namespace TALXIS.TestKit.Bindings.Tests
     public class ModelDrivenFormTests
     {
         private IWebDriver driver = null!;
+        private XrmApp xrmApp = null!;
         private ModelDrivenApp app = null!;
 
         [TestInitialize]
         public void OpenPage()
         {
             this.driver = PortalTestPage.Open("model-driven.html");
-            this.app = new ModelDrivenApp(new XrmApp(PortalTestPage.Client()));
+            this.xrmApp = new XrmApp(PortalTestPage.Client());
+            this.app = new ModelDrivenApp(this.xrmApp);
         }
 
         [TestMethod]
@@ -70,6 +72,20 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             Assert.IsTrue(this.app.SubGrid.IsCommandEnabled("Contacts", "Add Contact", enabled: true));
             Assert.IsTrue(this.app.SubGrid.IsCommandEnabled("Contacts", "Deactivate", enabled: false));
+        }
+
+        [TestMethod]
+        public void ClicksACommandInTheFlyoutOfACommand()
+        {
+            this.xrmApp.CommandBar.ClickCommand("Flow", "Run a flow");
+
+            Assert.AreEqual("Run a flow", this.driver.FindElement(By.TagName("body")).GetAttribute("data-clicked"));
+        }
+
+        [TestMethod]
+        public void RefusesToClickACommandThatIsNotInTheFlyout()
+        {
+            Assert.ThrowsException<InvalidOperationException>(() => this.xrmApp.CommandBar.ClickCommand("Flow", "Missing"));
         }
 
         [TestMethod]

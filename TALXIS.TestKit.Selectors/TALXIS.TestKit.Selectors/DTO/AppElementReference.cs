@@ -206,6 +206,7 @@ namespace TALXIS.TestKit.Selectors
             public static string ContainerGrid = "Cmd_ContainerGrid";
             public static string MoreCommandsMenu = "Cmd_MoreCommandsMenu";
             public static string Button = "Cmd_Button";
+            public static string FlyoutCommand = "Cmd_FlyoutCommand";
         }
 
         public static class Timeline
@@ -595,6 +596,8 @@ namespace TALXIS.TestKit.Selectors
             { "Cmd_ContainerGrid"       , "//ul[contains(@data-lp-id,\"commandbar-HomePageGrid\")]"},
             { "Cmd_MoreCommandsMenu"       , "//*[@id=\"__flyoutRootNode\"]"},
             { "Cmd_Button", "//*[contains(text(),'[NAME]')]"},
+            // A sub command, listed in the flyout that its command opens.
+            { "Cmd_FlyoutCommand", "//*[@id=\"__flyoutRootNode\"]//button//span[text()=[NAME]]"},
 
             //GlobalSearch
             { "Search_RelevanceSearchButton"       , "//div[@aria-label=\"Search box\"]//button" },

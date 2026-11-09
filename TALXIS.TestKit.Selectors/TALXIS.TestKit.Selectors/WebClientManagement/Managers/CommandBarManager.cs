@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenQA.Selenium;
 using TALXIS.TestKit.Selectors.DTO.Locators;
 using TALXIS.TestKit.Selectors.Browser;
@@ -8,6 +9,9 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 {
     public class CommandBarManager
     {
+        // A flyout renders its commands a moment after its command was clicked.
+        private static readonly TimeSpan FlyoutTimeout = TimeSpan.FromSeconds(5);
+
         public WebClient Client { get; }
 
         public CommandBarManager(WebClient client)
@@ -20,7 +24,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Command name cannot be empty", nameof(name));
 
-            return Client.Execute(Client.GetOptions($"Click Command: {name}"), driver =>
+            var clicked = Client.Execute(Client.GetOptions($"Click Command: {name}"), driver =>
             {
                 var ribbon = GetRibbon(driver);
 
@@ -30,6 +34,31 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 
                 throw new InvalidOperationException($"No command with the name '{name}' exists in the CommandBar.");
             });
+
+            var subcommands = new[] { subname, subSecondName }.Where(subcommand => !string.IsNullOrEmpty(subcommand)).ToList();
+            if (subcommands.Count == 0)
+                return clicked;
+
+            // A command with sub commands lists them in a flyout once it is clicked. They are not retried: clicking the
+            // command again would close its flyout.
+            return Client.Execute(Client.GetNoRetryOptions($"Click Command: {name} > {string.Join(" > ", subcommands)}"), driver =>
+            {
+                var parent = name;
+                foreach (var subcommand in subcommands)
+                {
+                    ClickFlyoutCommand(driver, parent, subcommand);
+                    parent = subcommand;
+                }
+
+                return true;
+            });
+        }
+
+        private static void ClickFlyoutCommand(IWebDriver driver, string parent, string name)
+        {
+            driver.WaitUntilAvailable(CommandBarElementsLocators.FlyoutCommand(name), FlyoutTimeout, $"No command with the name '{name}' exists under '{parent}' in the CommandBar.")
+                .Click(true);
+            driver.WaitForTransaction();
         }
 
         /// <summary>
