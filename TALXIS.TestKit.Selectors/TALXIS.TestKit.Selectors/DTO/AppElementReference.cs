@@ -206,6 +206,11 @@ namespace TALXIS.TestKit.Selectors
             public static string ContainerGrid = "Cmd_ContainerGrid";
             public static string MoreCommandsMenu = "Cmd_MoreCommandsMenu";
             public static string Button = "Cmd_Button";
+            public static string OverflowButton = "Cmd_OverflowButton";
+            public static string CommandItem = "Cmd_CommandItem";
+            public static string Flyout = "Cmd_Flyout";
+            public static string FlyoutOpener = "Cmd_FlyoutOpener";
+            public static string FlyoutCommand = "Cmd_FlyoutCommand";
         }
 
         public static class Timeline
@@ -595,6 +600,17 @@ namespace TALXIS.TestKit.Selectors
             { "Cmd_ContainerGrid"       , "//ul[contains(@data-lp-id,\"commandbar-HomePageGrid\")]"},
             { "Cmd_MoreCommandsMenu"       , "//*[@id=\"__flyoutRootNode\"]"},
             { "Cmd_Button", "//*[contains(text(),'[NAME]')]"},
+            // The More commands button of a command bar.
+            { "Cmd_OverflowButton", ".//button[@data-id='OverflowButton']"},
+            // The list item of a command, whose id names the command's flyout.
+            { "Cmd_CommandItem", "./ancestor::li[1]"},
+            // The flyout a command with sub commands opens: its id is the id of the command's list item with '_flyout'.
+            { "Cmd_Flyout", "//*[@id=[ID]]"},
+            // A command that opens a flyout, by its label or, for the half of a split button that opens it, its aria-label
+            // (the label, an empty line and the command's description).
+            { "Cmd_FlyoutOpener", ".//button[@aria-haspopup='true'][.//span[text()=[NAME]] or substring-before(concat(@aria-label, '\n'), '\n')=[NAME]]"},
+            // A command of a flyout that does not open another flyout (of a split button, the half that runs its command).
+            { "Cmd_FlyoutCommand", ".//button[@role='menuitem'][not(@aria-haspopup='true')][.//span[text()=[NAME]] or substring-before(concat(@aria-label, '\n'), '\n')=[NAME]]"},
 
             //GlobalSearch
             { "Search_RelevanceSearchButton"       , "//div[@aria-label=\"Search box\"]//button" },
