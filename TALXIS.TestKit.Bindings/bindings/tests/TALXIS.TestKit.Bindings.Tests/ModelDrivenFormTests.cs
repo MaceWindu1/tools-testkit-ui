@@ -80,9 +80,50 @@ namespace TALXIS.TestKit.Bindings.Tests
         [TestMethod]
         public void ClicksACommandInTheFlyoutOfACommand()
         {
-            this.xrmApp.CommandBar.ClickCommand("Flow", "Run a flow");
+            this.xrmApp.CommandBar.ClickCommand("Flow", "My flow");
 
-            Assert.AreEqual("Run a flow", this.driver.FindElement(By.TagName("body")).GetAttribute("data-clicked"));
+            Assert.AreEqual("My flow", this.ClickedCommand());
+        }
+
+        [TestMethod]
+        public void ClicksACommandInTheFlyoutOfACommandInAFlyout()
+        {
+            // The flyout of 'Flow' also lists a 'My flow', and stays open while the flyout of 'Run a flow' opens.
+            this.xrmApp.CommandBar.ClickCommand("Flow", "Run a flow", "My flow");
+
+            Assert.AreEqual("Run a flow > My flow", this.ClickedCommand());
+        }
+
+        [TestMethod]
+        public void OpensTheFlyoutOfASplitButtonWithoutRunningItsCommand()
+        {
+            this.xrmApp.CommandBar.ClickCommand("Connect", "To Another Person");
+
+            Assert.AreEqual("To Another Person", this.ClickedCommand());
+        }
+
+        [TestMethod]
+        public void RunsTheCommandOfASplitButton()
+        {
+            this.xrmApp.CommandBar.ClickCommand("Connect");
+
+            Assert.AreEqual("Connect", this.ClickedCommand());
+        }
+
+        [TestMethod]
+        public void ClicksACommandInMoreCommands()
+        {
+            this.xrmApp.CommandBar.ClickCommand("Refresh");
+
+            Assert.AreEqual("Refresh", this.ClickedCommand());
+        }
+
+        [TestMethod]
+        public void ClicksACommandInTheFlyoutOfACommandInMoreCommands()
+        {
+            this.xrmApp.CommandBar.ClickCommand("Word Templates", "Invoice");
+
+            Assert.AreEqual("Invoice", this.ClickedCommand());
         }
 
         [TestMethod]
@@ -134,6 +175,8 @@ namespace TALXIS.TestKit.Bindings.Tests
             Assert.IsTrue(this.app.Entity.IsFieldEditable("Email frequency", editable: false));
             Assert.IsFalse(this.app.Entity.IsFieldEditable("Email frequency", editable: true));
         }
+
+        private string ClickedCommand() => this.driver.FindElement(By.TagName("body")).GetAttribute("data-clicked");
 
         // Shows the page as a form of the given type (Xrm.Page.ui.getFormType), with or without the read-only notification.
         private void ShowForm(int formType, string? readOnlyNotification)
