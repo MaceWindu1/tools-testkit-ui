@@ -22,6 +22,11 @@ module.exports = function (config) {
             'text/x-typescript': ['ts', 'tsx']
         },
         karmaTypescriptConfig: {
+            tsconfig: './tsconfig.json',
+            // karma-typescript bundles CommonJS modules; webpack builds the driver from ES modules.
+            compilerOptions: {
+                module: 'commonjs',
+            },
             reports:
             {
                 html: {

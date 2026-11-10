@@ -24,12 +24,89 @@
   </ul>
 </div>
 
+<!-- A form command bar as a model-driven app renders it: a command is a button with its label in a span (its aria-label
+     is the label, an empty line and the command's description). A command with
+     sub commands has aria-haspopup; a moment after it is clicked, its flyout opens in the Fluent portal mount node, as a
+     div whose id is the id of the command's list item with '_flyout' (clicking the command again closes it). A split
+     button has a button that runs its command and an unlabelled one that opens its flyout. Commands that do not fit are
+     in the More commands flyout. The page records the command it runs in the body's data-clicked attribute. -->
+<ul data-lp-id="commandbar-Form:account">
+  <li id="account|Form|Flows_button1"><button role="menuitem" aria-label="Run Flow&#10;&#10;Run a flow on the record." aria-haspopup="true" aria-expanded="false"><span>Flow</span></button></li>
+  <li id="account|Form|Connect1_splitButton"><button role="menuitem" aria-label="Connect&#10;&#10;Connect the record to another."><span>Connect</span></button></li>
+  <li id="account|Form|Connect$splitButtonId_button1"><button role="menuitem" aria-label="Connect&#10;&#10;Connect the record to another." aria-haspopup="true" aria-expanded="false"></button></li>
+  <li id="OverflowButton_button1"><button role="menuitem" data-id="OverflowButton" aria-label="More commands for Account" aria-haspopup="true" aria-expanded="false"></button></li>
+</ul>
+<div id="__fluentPortalMountNode"></div>
+
 <!-- Text behind the dialogs, a dialog and a dialog opened from it (topmost, later in the page). -->
 <p>Summary</p>
 <div role="dialog"><h1>Wizard</h1><p>Step 1</p><button title="Next">Next</button></div>
 <div role="dialog"><h1>Confirm</h1><p>Leave the wizard?</p><button title="Leave">Leave</button></div>
 
 <script>
+  // The commands of the flyouts, by the id of the list item of the command that opens them. 'My flow' is in two flyouts.
+  const flyouts = {
+    'account|Form|Flows_button1': [
+      { item: 'account|Form|Flows.RunFlow_button1', label: 'Run a flow', opens: true },
+      { item: 'account|Form|Flows.MyFlow0', label: 'My flow' },
+    ],
+    'account|Form|Flows.RunFlow_button1': [{ item: 'account|Form|Flows.RunFlow.MyFlow0', label: 'My flow', runs: 'Run a flow > My flow' }],
+    'account|Form|Connect$splitButtonId_button1': [{ item: 'account|Form|Connect.ToAnother0', label: 'To Another Person' }],
+    'OverflowButton_button1': [
+      { item: 'account|Form|Refresh0', label: 'Refresh' },
+      { item: 'account|Form|WordTemplate_button1', label: 'Word Templates', opens: true },
+    ],
+    'account|Form|WordTemplate_button1': [{ item: 'account|Form|WordTemplate.Invoice0', label: 'Invoice' }],
+  };
+
+  function openFlyout(item) {
+    const flyout = document.createElement('div');
+    flyout.id = item + '_flyout';
+    const menu = document.createElement('ul');
+    menu.setAttribute('role', 'menu');
+    menu.dataset.id = item === 'OverflowButton_button1' ? 'OverflowFlyout' : item;
+    for (const command of flyouts[item]) {
+      const listItem = document.createElement('li');
+      listItem.id = command.item;
+      const button = document.createElement('button');
+      button.setAttribute('role', 'menuitem');
+      button.setAttribute('aria-label', command.label);
+      if (command.opens) {
+        button.setAttribute('aria-haspopup', 'true');
+        button.setAttribute('aria-expanded', 'false');
+      }
+      button.dataset.runs = command.runs || command.label;
+      const label = document.createElement('span');
+      label.textContent = command.label;
+      button.append(label);
+      listItem.append(button);
+      menu.append(listItem);
+    }
+    flyout.append(menu);
+    document.getElementById('__fluentPortalMountNode').append(flyout);
+  }
+
+  document.addEventListener('click', event => {
+    const button = event.target.closest('ul[data-lp-id] button, #__fluentPortalMountNode button');
+    if (!button) {
+      return;
+    }
+
+    if (button.getAttribute('aria-haspopup') !== 'true') {
+      document.body.dataset.clicked = button.dataset.runs || button.textContent;
+      return;
+    }
+
+    const item = button.closest('li').id;
+    const open = document.getElementById(item + '_flyout');
+    button.setAttribute('aria-expanded', open ? 'false' : 'true');
+    if (open) {
+      open.remove();
+    } else {
+      setTimeout(() => openFlyout(item), 300);
+    }
+  });
+
   function attribute(name, value) { return { getName: () => name, getValue: () => value }; }
   function control(label, attribute) { return { getLabel: () => label, getAttribute: () => attribute }; }
 

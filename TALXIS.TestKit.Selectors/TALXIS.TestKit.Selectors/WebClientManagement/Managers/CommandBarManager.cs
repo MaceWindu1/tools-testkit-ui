@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenQA.Selenium;
 using TALXIS.TestKit.Selectors.DTO.Locators;
 using TALXIS.TestKit.Selectors.Browser;
@@ -20,16 +21,67 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Command name cannot be empty", nameof(name));
 
-            return Client.Execute(Client.GetOptions($"Click Command: {name}"), driver =>
+            var subcommands = new[] { subname, subSecondName }.Where(subcommand => !string.IsNullOrEmpty(subcommand)).ToList();
+            if (subcommands.Count == 0)
             {
-                var ribbon = GetRibbon(driver);
+                return Client.Execute(Client.GetOptions($"Click Command: {name}"), driver =>
+                {
+                    var ribbon = GetRibbon(driver);
 
-                // Try clicking on the command
-                if (TryClickCommand(ribbon, name, driver)) return true;
-                if (TryClickOverflowCommand(ribbon, name, driver)) return true;
+                    // Try clicking on the command
+                    if (TryClickCommand(ribbon, name, driver)) return true;
+                    if (TryClickOverflowCommand(ribbon, name, driver)) return true;
 
-                throw new InvalidOperationException($"No command with the name '{name}' exists in the CommandBar.");
+                    throw new InvalidOperationException($"No command with the name '{name}' exists in the CommandBar.");
+                });
+            }
+
+            // Each command opens the flyout that lists the next one. Clicking a command again closes its flyout, so this is
+            // not retried.
+            return Client.Execute(Client.GetNoRetryOptions($"Click Command: {name} > {string.Join(" > ", subcommands)}"), driver =>
+            {
+                var command = FindFlyoutOpener(driver, GetRibbon(driver), name);
+                var parent = name;
+                for (var level = 0; level < subcommands.Count; level++)
+                {
+                    var subcommand = subcommands[level];
+                    var locator = level < subcommands.Count - 1
+                        ? CommandBarElementsLocators.FlyoutOpener(subcommand)
+                        : CommandBarElementsLocators.FlyoutCommand(subcommand);
+
+                    // A flyout can load its commands from the server (e.g. flows, reports or templates).
+                    command = OpenFlyout(driver, command, parent)
+                        .WaitUntilAvailable(locator, $"No command with the name '{subcommand}' exists under '{parent}' in the CommandBar.");
+                    parent = subcommand;
+                }
+
+                command.Click();
+                driver.WaitForTransaction();
+                return true;
             });
+        }
+
+        // A command that opens a flyout, in the command bar or in its More commands flyout.
+        private static IWebElement FindFlyoutOpener(IWebDriver driver, IWebElement ribbon, string name)
+        {
+            var command = ribbon.FindElements(CommandBarElementsLocators.FlyoutOpener(name)).FirstOrDefault();
+            if (command != null)
+                return command;
+
+            var notFound = $"No command with the name '{name}' that has sub commands exists in the CommandBar.";
+            var moreCommands = ribbon.FindElements(CommandBarElementsLocators.OverflowButton).FirstOrDefault()
+                ?? throw new InvalidOperationException(notFound);
+
+            return OpenFlyout(driver, moreCommands, "More commands").WaitUntilAvailable(CommandBarElementsLocators.FlyoutOpener(name), notFound);
+        }
+
+        // Clicks a command that opens a flyout and waits for its flyout.
+        private static IWebElement OpenFlyout(IWebDriver driver, IWebElement command, string name)
+        {
+            var commandItem = command.FindElement(CommandBarElementsLocators.CommandItem).GetAttribute("id");
+            command.Click();
+
+            return driver.WaitUntilAvailable(CommandBarElementsLocators.Flyout(commandItem), $"The flyout of '{name}' did not open.");
         }
 
         /// <summary>
@@ -113,7 +165,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         /// </summary>
         private static bool TryClickOverflowCommand(IWebElement ribbon, string name, IWebDriver driver)
         {
-            if (!ribbon.TryFindElement(RelatedElementsLocators.CommandBarOverflowButton, out var moreCommands))
+            if (!ribbon.TryFindElement(CommandBarElementsLocators.OverflowButton, out var moreCommands))
                 return false;
 
             moreCommands.Click(true);
