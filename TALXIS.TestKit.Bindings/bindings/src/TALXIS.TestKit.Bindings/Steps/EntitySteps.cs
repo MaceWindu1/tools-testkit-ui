@@ -482,7 +482,7 @@
         private static string GetFormStatus()
         {
             // 'Active' on an editable form, the status that a read-only notification names, or nothing when the form shows
-            // neither (e.g. its notification bar collapses several notifications); then only the header can show the status.
+            // neither; then only the header can show the status.
             var result = XrmApp.Entity.GetFormStatus();
 
             if (!string.IsNullOrEmpty(result))

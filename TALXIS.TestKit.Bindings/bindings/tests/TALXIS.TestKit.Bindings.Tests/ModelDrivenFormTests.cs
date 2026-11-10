@@ -158,7 +158,6 @@ namespace TALXIS.TestKit.Bindings.Tests
         [TestMethod]
         public void DoesNotTellTheStatusOfAReadOnlyFormWithoutItsNotification()
         {
-            // E.g. an inactive record whose notification bar collapses several notifications.
             this.ShowForm(DisabledFormType, readOnlyNotification: null);
 
             Assert.IsNull(this.xrmApp.Entity.GetFormStatus());
