@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <None Include="TestPages\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\..\..\samples\*.feature" Link="Samples\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
