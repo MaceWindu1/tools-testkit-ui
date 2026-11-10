@@ -5,7 +5,7 @@
     "build": "npm install && webpack --config webpack.config.js",
     "build:watch": "webpack --config webpack.config.js --watch",
     "test": "karma start karma.conf.js",
-    "test:ci": "karma start karma.conf.js --single-run"
+    "test:ci": "karma start karma.conf.js --single-run --browsers ChromeHeadless"
   },
   "files": [
     "dist"
