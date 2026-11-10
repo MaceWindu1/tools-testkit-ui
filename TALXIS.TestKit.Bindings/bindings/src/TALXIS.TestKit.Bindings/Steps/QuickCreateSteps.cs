@@ -5,7 +5,6 @@
     using System.Linq;
     using System.Threading;
     using FluentAssertions;
-    using OpenQA.Selenium;
     using OpenQA.Selenium.Support.UI;
     using Reqnroll;
     using TALXIS.TestKit.Bindings.Extensions;
@@ -32,13 +31,13 @@
         {
             Driver.WaitForPageToLoad();
 
-            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
+            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(fieldLabel);
             string fieldType = MetadataHelper.GetFieldTypeFromDomByLogicalName(fieldLogicalName);
 
             SetFieldValue(fieldLogicalName, fieldValue.ReplaceTemplatedText(TestConfig.Parameters), fieldType);
 
             // Click to lose focus - So that business rules and other form events can occur
-            Driver.FindElement(By.XPath("html")).Click();
+            Client.TryLoseFocus();
 
             Driver.WaitForTransaction();
         }
@@ -82,7 +81,7 @@
         [When(@"I clear the '(.*)' (?:currency|numeric|text|datetime|boolean) field on the quick create")]
         public static void WhenIClearTheFieldOnTheQuickCreate(string fieldLabel)
         {
-            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(Driver, fieldLabel);
+            string fieldLogicalName = XrmApp.Entity.GetFieldLogicalNameFromLabel(fieldLabel);
             XrmApp.QuickCreate.ClearValue(fieldLogicalName);
         }
 

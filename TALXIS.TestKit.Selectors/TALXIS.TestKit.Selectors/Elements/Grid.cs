@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
+using System;
 using System.Collections.Generic;
 using TALXIS.TestKit.Selectors.WebClientManagement;
 using TALXIS.TestKit.Selectors.Browser;
@@ -75,6 +76,17 @@ namespace TALXIS.TestKit.Selectors
         public List<GridItem> GetGridItems()
         {
             return _gridManager.GetGridItems();
+        }
+
+        /// <summary>
+        /// Gets the index of a record in the grid by its id. The ids of <see cref="GetGridItems"/> are wrong
+        /// (https://github.com/microsoft/EasyRepro/issues/800).
+        /// </summary>
+        /// <param name="recordId">The id of the record.</param>
+        /// <returns>The index, or -1 when the grid does not show the record.</returns>
+        public int GetRecordIndexById(Guid recordId)
+        {
+            return _gridManager.GetRecordIndexById(recordId);
         }
 
         /// <summary>

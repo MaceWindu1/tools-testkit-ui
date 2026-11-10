@@ -378,8 +378,8 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
                     driver.WaitForTransaction();
                     if (!driver.TryFindElement(By.Id("message-formReadOnlyNotification"), out var readOnlyNotification))
                     {
-                        // A notification bar with several notifications hides the read-only one, so a form without it
-                        // only shows an active record when the record can be edited.
+                        // Without the read-only notification, only an editable form shows an active record (an inactive
+                        // record opens in a disabled form with the notification).
                         return IsFormEditable(driver) ? "Active" : null;
                     }
 

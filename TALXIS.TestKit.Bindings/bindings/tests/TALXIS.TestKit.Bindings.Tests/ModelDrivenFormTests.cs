@@ -12,6 +12,11 @@ namespace TALXIS.TestKit.Bindings.Tests
         private const int UpdateFormType = 2;
         private const int DisabledFormType = 4;
 
+        // The accounts of the page's grid and the account its second contact references (TestPages/model-driven.html).
+        private static readonly Guid FirstAccount = new("a1b2c3d4-0000-0000-0000-000000000001");
+        private static readonly Guid SecondAccount = new("a1b2c3d4-0000-0000-0000-000000000002");
+        private static readonly Guid OtherAccount = new("a1b2c3d4-0000-0000-0000-000000000003");
+
         private IWebDriver driver = null!;
         private XrmApp xrmApp = null!;
         private ModelDrivenApp app = null!;
@@ -153,7 +158,6 @@ namespace TALXIS.TestKit.Bindings.Tests
         [TestMethod]
         public void DoesNotTellTheStatusOfAReadOnlyFormWithoutItsNotification()
         {
-            // E.g. an inactive record whose notification bar collapses several notifications.
             this.ShowForm(DisabledFormType, readOnlyNotification: null);
 
             Assert.IsNull(this.xrmApp.Entity.GetFormStatus());
@@ -174,6 +178,39 @@ namespace TALXIS.TestKit.Bindings.Tests
         {
             Assert.IsTrue(this.app.Entity.IsFieldEditable("Email frequency", editable: false));
             Assert.IsFalse(this.app.Entity.IsFieldEditable("Email frequency", editable: true));
+        }
+
+        [TestMethod]
+        public void FindsARecordOfTheGridByItsId()
+        {
+            Assert.AreEqual(1, this.xrmApp.Grid.GetRecordIndexById(SecondAccount));
+            Assert.AreEqual(-1, this.xrmApp.Grid.GetRecordIndexById(OtherAccount));
+        }
+
+        [TestMethod]
+        public void FindsARecordOfASubgridByTheRecordItsLookupReferences()
+        {
+            Assert.AreEqual(1, this.xrmApp.Entity.SubGrid.GetRecordIndexByLookup("Contacts", "parentcustomerid", FirstAccount));
+            Assert.AreEqual(-1, this.xrmApp.Entity.SubGrid.GetRecordIndexByLookup("Contacts", "parentcustomerid", OtherAccount));
+        }
+
+        [TestMethod]
+        public void TellsWhetherASectionIsShown()
+        {
+            Assert.IsTrue(this.xrmApp.Entity.IsSectionVisible("details_section"));
+            Assert.IsFalse(this.xrmApp.Entity.IsSectionVisible("missing_section"));
+        }
+
+        [TestMethod]
+        public void TellsWhetherTheNewLookIsOn()
+        {
+            Assert.IsTrue(NavigationManager.IsNewLookEnabled(this.driver));
+
+            ((IJavaScriptExecutor)this.driver).ExecuteScript("document.querySelector('button.ms-Toggle-background').setAttribute('aria-checked', 'false');");
+            Assert.IsFalse(NavigationManager.IsNewLookEnabled(this.driver));
+
+            ((IJavaScriptExecutor)this.driver).ExecuteScript("document.querySelector('button.ms-Toggle-background').remove();");
+            Assert.IsTrue(NavigationManager.IsNewLookEnabled(this.driver), "An app without the toggle has only the new look.");
         }
 
         private string ClickedCommand() => this.driver.FindElement(By.TagName("body")).GetAttribute("data-clicked");

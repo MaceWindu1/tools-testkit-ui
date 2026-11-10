@@ -2,7 +2,6 @@
 {
     using FluentAssertions;
     using Reqnroll;
-    using TALXIS.TestKit.Bindings.Extensions;
     using TALXIS.TestKit.Selectors.Browser;
 
     /// <summary>
@@ -71,7 +70,7 @@
         {
             var index = GetGridItemIndexByAlias(recordAlias);
 
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid.");
+            index.HasValue.Should().BeTrue(because: $"'{recordAlias}' should be in the grid");
         }
 
         /// <summary>
@@ -107,7 +106,7 @@
         private static void HighlightRowByAlias(string alias)
         {
             var index = GetGridItemIndexByAlias(alias);
-            index.HasValue.Should().BeTrue(because: "the record should be found in the grid.");
+            index.HasValue.Should().BeTrue(because: $"'{alias}' should be in the grid");
 
             XrmApp.Grid.HighLightRecord(index.Value);
         }
@@ -115,12 +114,7 @@
         private static int? GetGridItemIndexByAlias(string recordAlias)
         {
             var record = TestDriver.GetTestRecordReference(recordAlias);
-
-            /*
-             * TODO: Replace extension method with the below code when the following bug is resolved: https://github.com/microsoft/EasyRepro/issues/800.
-             * var index = XrmApp.Grid.GetGridItems().FindIndex(i => i.Id == record.Id);
-             */
-            var index = XrmApp.Grid.GetRecordIndexById(Driver, record.Id);
+            var index = XrmApp.Grid.GetRecordIndexById(record.Id);
 
             return index > -1 ? index : default(int?);
         }

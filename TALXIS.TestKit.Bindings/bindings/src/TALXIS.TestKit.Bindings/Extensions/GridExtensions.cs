@@ -3,7 +3,6 @@
     using System;
     using OpenQA.Selenium;
     using TALXIS.TestKit.Selectors;
-    using TALXIS.TestKit.Selectors.Browser;
 
     /// <summary>
     /// Extensions to the <see cref="Grid"/> class.
@@ -18,22 +17,18 @@
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <param name="recordId">The ID of the record.</param>
         /// <returns>The index of the record.</returns>
+        [Obsolete("Use Grid.GetRecordIndexById(recordId), which returns -1 when the grid does not show the record.")]
         public static int GetRecordIndexById(this Grid grid, IWebDriver driver, Guid recordId)
         {
-            if (driver is null)
-            {
-                throw new ArgumentNullException(nameof(driver));
-            }
+            grid = grid ?? throw new ArgumentNullException(nameof(grid));
 
-            driver.WaitUntilAvailable(By.XPath(AppElements.Xpath[AppReference.Grid.Container]));
-
-            var index = (long)driver.ExecuteScript($"return Object.keys(getCurrentXrmStatus().mainGrid._grid.getRows()._collection).indexOf(\"{recordId}\");");
+            var index = grid.GetRecordIndexById(recordId);
             if (index == -1)
             {
                 throw new Exception($"A record with an ID of {recordId} is not present in the grid");
             }
 
-            return Convert.ToInt32(index);
+            return index;
         }
     }
 }

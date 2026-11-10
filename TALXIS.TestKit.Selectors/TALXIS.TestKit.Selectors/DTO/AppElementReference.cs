@@ -20,6 +20,7 @@ namespace TALXIS.TestKit.Selectors
             public static string AreaMoreMenu = "Nav_AreaMoreMenu";
             public static string SubAreaContainer = "Nav_SubAreaContainer";
             public static string SubAreaImage = "Nav_SubAreaImage";
+            public static string NewLookToggle = "Nav_NewLookToggle";
             public static string WebAppMenuButton = "Nav_WebAppMenuButton";
             public static string UCIAppMenuButton = "Nav_UCIAppMenuButton";
             public static string SiteMapLauncherButton = "Nav_SiteMapLauncherButton";
@@ -414,6 +415,8 @@ namespace TALXIS.TestKit.Selectors
             { "Nav_AreaMoreMenu"       , "//ul[@role=\"menubar\"]"},
             { "Nav_SubAreaContainer"       , "//*[@data-id=\"navbar-container\"]/div/ul"},
             { "Nav_SubAreaImage"           , "//img[@title=[LABEL]]"},
+            // The toggle of the new look in the app's header; an app that only has the new look does not show it.
+            { "Nav_NewLookToggle"          , "//button[contains(concat(' ', normalize-space(@class), ' '), ' ms-Toggle-background ')]"},
             { "Nav_WebAppMenuButton"       , "//*[@id=\"TabArrowDivider\"]/a"},
             { "Nav_UCIAppMenuButton"       , "//a[@data-id=\"appBreadCrumb\"]"},
             { "Nav_SiteMapLauncherButton", "//button[@data-lp-id=\"sitemap-launcher\"]" },

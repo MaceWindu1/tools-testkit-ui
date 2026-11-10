@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
     using System.Linq;
     using FluentAssertions;
     using OpenQA.Selenium;
@@ -191,10 +190,7 @@
         public static void ThenTheSubgridShouldContainARecordWithInTheLookup(string subGridName, string alias, string lookup)
         {
             var reference = TestDriver.GetTestRecordReference(alias);
-
-            // Temporary until XrmApp.Entity.SubGrid.GetSubGridItems(subGridName) returns the correct ID for each item.
-            var index = (long)Driver.ExecuteScript(
-                $"return Xrm.Page.getControl(\"{subGridName}\").getGrid().getRows().get().findIndex(row => row.data.entity.attributes.get().findIndex(a => a.getName() === \"{lookup}\" && a.getValue() && a.getValue()[0].id === \"{reference.Id.ToString("B").ToUpper(CultureInfo.CurrentCulture)}\") > -1)");
+            var index = XrmApp.Entity.SubGrid.GetRecordIndexByLookup(subGridName, lookup, reference.Id);
 
             index.Should().BeGreaterOrEqualTo(0, because: "a matching record should be present in the subgrid");
         }

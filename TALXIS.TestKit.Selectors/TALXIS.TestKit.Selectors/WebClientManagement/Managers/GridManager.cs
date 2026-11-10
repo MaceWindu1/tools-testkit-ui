@@ -465,6 +465,21 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             });
         }
 
+        internal BrowserCommandResult<int> GetRecordIndexById(Guid recordId)
+        {
+            return Client.Execute(Client.GetNoRetryOptions($"Get Grid Record Index: {recordId}"), driver =>
+            {
+                driver.WaitUntilAvailable(GridElementsLocators.Container, "Could not find the grid.");
+
+                // The app's grid state has the records by their ids.
+                var index = (long)((IJavaScriptExecutor)driver).ExecuteScript(
+                    "return Object.keys(getCurrentXrmStatus().mainGrid._grid.getRows()._collection).indexOf(arguments[0]);",
+                    recordId.ToString());
+
+                return Convert.ToInt32(index);
+            });
+        }
+
         internal BrowserCommandResult<List<GridItem>> GetGridItems(int thinkTime = Constants.DefaultThinkTime)
         {
             Client.ThinkTime(thinkTime);

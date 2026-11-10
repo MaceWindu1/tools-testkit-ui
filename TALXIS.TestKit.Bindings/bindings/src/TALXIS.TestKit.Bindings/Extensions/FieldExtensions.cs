@@ -18,6 +18,7 @@
         /// <param name="field">The field.</param>
         /// <param name="driver">The Selenium WebDriver.</param>
         /// <returns>Whether the field is read-only.</returns>
+        [Obsolete("Use Entity.IsFieldReadOnly(fieldName).")]
         public static bool IsReadOnly(this Field field, IWebDriver driver)
         {
             field = field ?? throw new ArgumentNullException(nameof(field));
