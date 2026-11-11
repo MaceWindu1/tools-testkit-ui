@@ -6,7 +6,9 @@ namespace TALXIS.TestKit.Bindings.Tests
     using System.Linq;
     using System.Reflection;
     using System.Reflection.Emit;
+    using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading.Tasks;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Reqnroll;
     using TALXIS.TestKit.Selectors;
@@ -16,10 +18,11 @@ namespace TALXIS.TestKit.Bindings.Tests
     /// from the compiled bindings: a step acts on the configured target through <c>App</c>, on a model-driven app through
     /// <c>XrmApp</c> or <c>ModelDrivenApp</c>, and on a TALXIS Portal through <c>PortalApp</c>. Through <c>App</c>, a target
     /// whose implementation of an operation throws a <see cref="NotSupportedException"/> without ever returning does not
-    /// support the step, and one that throws it for some values supports it partly; a step that only throws a
-    /// <see cref="NotImplementedException"/> acts on neither app. A step that acts on no app object is listed only with what
-    /// runs against real apps confirmed (<c>StepsWithoutApp</c>). Run the tests with the UPDATE_STEP_TABLE environment
-    /// variable set to 1 to rewrite the table.
+    /// support the step, and one that throws it (or calls a method that throws it) for some values supports it partly; a
+    /// step that only throws a <see cref="PendingStepException"/> is not implemented and acts on neither app. A step that acts
+    /// on no app object is listed only with what runs against real apps confirmed (<c>StepsWithoutApp</c>). Run the tests
+    /// with the UPDATE_STEP_TABLE environment variable set to 1 to rewrite the table; the test still fails once, so that the
+    /// rewritten README gets reviewed and committed.
     /// </summary>
     [TestClass]
     public class StepTargetTableTests
@@ -38,6 +41,8 @@ namespace TALXIS.TestKit.Bindings.Tests
 
         private static readonly Dictionary<short, OpCode> OneByteOpCodes = OpCodesOfSize(1);
         private static readonly Dictionary<short, OpCode> TwoByteOpCodes = OpCodesOfSize(2);
+        private static readonly OpCode[] LoadLocalOpCodes = { OpCodes.Ldloc_0, OpCodes.Ldloc_1, OpCodes.Ldloc_2, OpCodes.Ldloc_3 };
+        private static readonly OpCode[] StoreLocalOpCodes = { OpCodes.Stloc_0, OpCodes.Stloc_1, OpCodes.Stloc_2, OpCodes.Stloc_3 };
         private static readonly HashSet<Type> TargetInterfaces = typeof(IAppUnderTest).GetProperties().Select(property => property.PropertyType).ToHashSet();
 
         // Implementations that throw a NotSupportedException for one value of their last (bool) parameter only, and the value;
@@ -69,6 +74,14 @@ namespace TALXIS.TestKit.Bindings.Tests
             ["Given '(.*)' has created '(.*)'"] = (Unconfirmed, Unconfirmed),
         };
 
+        // Worked out once: it reads the IL of every step and of everything the steps call.
+        private static readonly Lazy<IReadOnlyList<(string Step, string ModelDrivenApp, string Portal)>> StepRows = new(() => Rows().ToList());
+
+        private interface IFixtureCheck
+        {
+            void Check();
+        }
+
         [DataTestMethod]
         [DataRow("Given I have created '(.*)'", Supported, Supported)]
         [DataRow("Given I have opened '(.*)'", Supported, NotSupported)]
@@ -83,9 +96,34 @@ namespace TALXIS.TestKit.Bindings.Tests
         [DataRow("Then the virtual dataset grid should contain '(.*)'", NotSupported, Supported)]
         public void WorksOutTheAppsOfAStep(string step, string modelDrivenApp, string portal)
         {
-            var row = Rows().Single(row => row.Step == step);
+            var row = StepRows.Value.Single(row => row.Step == step);
 
             Assert.AreEqual((modelDrivenApp, portal), (row.ModelDrivenApp, row.Portal), step);
+        }
+
+        [TestMethod]
+        public void TracesTheBodyOfAnAsyncStep()
+        {
+            Assert.AreEqual((Supported, Supported), AppsOf(FixtureStep(nameof(Fixtures.ChecksAnEnabledCommandAsync)), "an async step"));
+        }
+
+        [TestMethod]
+        public void ReadsAConstantPassedThroughALocal()
+        {
+            Assert.AreEqual((Supported, NotSupported), AppsOf(FixtureStep(nameof(Fixtures.ChecksADisabledCommandThroughALocal)), "a step with a local"));
+        }
+
+        [TestMethod]
+        public void TracesTheImplementationsOfAnInterfaceMethod()
+        {
+            Assert.AreEqual((NotSupported, Supported), AppsOf(FixtureStep(nameof(Fixtures.ChecksThroughAnInterface)), "a step with an interface"));
+        }
+
+        [TestMethod]
+        public void FindsAnExceptionThatAMethodOrItsCalleesCreate()
+        {
+            Assert.IsTrue(MayCreate(FixtureStep(nameof(Fixtures.RefusesSomeValuesInAHelper)), typeof(NotSupportedException)));
+            Assert.IsFalse(MayCreate(FixtureStep(nameof(Fixtures.AcceptsEveryValue)), typeof(NotSupportedException)));
         }
 
         [TestMethod]
@@ -98,15 +136,15 @@ namespace TALXIS.TestKit.Bindings.Tests
             var end = readme.IndexOf(End, StringComparison.Ordinal);
             Assert.IsTrue(start >= 0 && end > start, $"The README has no section between '{Begin}' and '{End}'.");
 
-            var unconfirmed = Rows().Where(row => row.ModelDrivenApp == Pending || row.Portal == Pending).Select(row => row.Step).ToList();
+            var unconfirmed = StepRows.Value.Where(row => row.ModelDrivenApp == Pending || row.Portal == Pending).Select(row => row.Step).ToList();
             Assert.AreEqual(0, unconfirmed.Count, $"Steps that act on no app object and are not in {nameof(StepsWithoutApp)}; confirm on which apps they work with runs against real apps:{Environment.NewLine}{string.Join(Environment.NewLine, unconfirmed)}");
 
             var table = Table().Replace("\n", newLine, StringComparison.Ordinal);
             var current = readme.Substring(start + Begin.Length, end - start - Begin.Length);
-            if (Environment.GetEnvironmentVariable("UPDATE_STEP_TABLE") == "1")
+            if (table != current && Environment.GetEnvironmentVariable("UPDATE_STEP_TABLE") == "1")
             {
                 File.WriteAllText(readmePath, readme.Substring(0, start + Begin.Length) + table + readme.Substring(end), new UTF8Encoding(false));
-                return;
+                Assert.Fail("The README's table of the steps by app was not current and has been rewritten; review and commit README.md.");
             }
 
             Assert.AreEqual(table, current, $"The README's table of the steps by app is not current. Run the tests with UPDATE_STEP_TABLE=1 to rewrite it:{Environment.NewLine}{table}");
@@ -115,7 +153,7 @@ namespace TALXIS.TestKit.Bindings.Tests
         private static string Table()
         {
             var table = new StringBuilder("\n\n| Step | Model-driven app | TALXIS Portal |\n| --- | :---: | :---: |\n");
-            foreach (var row in Rows())
+            foreach (var row in StepRows.Value)
             {
                 table.Append($"| `{row.Step.Replace("|", "\\|", StringComparison.Ordinal)}` | {row.ModelDrivenApp} | {row.Portal} |\n");
             }
@@ -141,14 +179,14 @@ namespace TALXIS.TestKit.Bindings.Tests
 
         private static (string ModelDrivenApp, string Portal) AppsOf(MethodInfo step, string text)
         {
-            if (AlwaysThrows(step, typeof(NotImplementedException)))
+            if (AlwaysThrows(step, typeof(PendingStepException)))
             {
                 return (NotSupported, NotSupported);
             }
 
             var (properties, operations) = Reach(step);
-            var modelDrivenApp = properties.Contains("get_XrmApp") || properties.Contains("get_ModelDrivenApp");
-            var portal = properties.Contains("get_PortalApp");
+            var modelDrivenApp = properties.Contains(Fixtures.XrmAppGetter) || properties.Contains(Fixtures.ModelDrivenAppGetter);
+            var portal = properties.Contains(Fixtures.PortalAppGetter);
             if (modelDrivenApp && portal)
             {
                 throw new InvalidOperationException($"{step.DeclaringType!.Name}.{step.Name} acts on a model-driven app and on a TALXIS Portal directly.");
@@ -164,7 +202,7 @@ namespace TALXIS.TestKit.Bindings.Tests
                 return (NotSupported, Supported);
             }
 
-            if (properties.Contains("get_App"))
+            if (properties.Contains(Fixtures.AppGetter))
             {
                 return (SupportOf(operations, typeof(ModelDrivenApp)), SupportOf(operations, typeof(PortalApp)));
             }
@@ -174,43 +212,77 @@ namespace TALXIS.TestKit.Bindings.Tests
         }
 
         // The properties of PowerAppsStepDefiner (e.g. get_App) and the operations of the target (e.g. IEntity.SetValue) that
-        // a step uses, also through the methods of the bindings it calls (helpers, other steps, lambdas), each with the value
-        // of its last parameter when the step passes a constant bool.
+        // a step uses, also through what it calls in its assembly (helpers, other steps, lambdas, the bodies of async methods,
+        // the implementations of interface methods), each with the value of its last parameter when the step passes a constant
+        // bool, directly or through a local.
         private static (HashSet<string> Properties, HashSet<(MethodInfo Operation, bool? Last)> Operations) Reach(MethodInfo step)
         {
             var properties = new HashSet<string>(StringComparer.Ordinal);
             var operations = new HashSet<(MethodInfo Operation, bool? Last)>();
-            var seen = new HashSet<MethodBase>();
-            var pending = new Queue<MethodBase>(new[] { step });
-            while (pending.Count > 0)
+            var steps = Walk(
+                RunsOf(step),
+                method => Callees(method).Where(callee => callee.Module == step.Module && callee.DeclaringType != typeof(PowerAppsStepDefiner)).SelectMany(RunsOf));
+            foreach (var method in steps)
             {
-                var method = pending.Dequeue();
-                if (!seen.Add(method))
+                var locals = new Dictionary<int, bool?>();
+                bool? pushed = null;
+                foreach (var instruction in Instructions(method))
                 {
-                    continue;
-                }
-
-                OpCode previous = OpCodes.Nop;
-                foreach (var (opCode, called) in Instructions(method))
-                {
-                    if (called?.DeclaringType == typeof(PowerAppsStepDefiner))
+                    if (instruction.Method?.DeclaringType == typeof(PowerAppsStepDefiner))
                     {
-                        properties.Add(called.Name);
+                        properties.Add(instruction.Method.Name);
                     }
-                    else if (called is MethodInfo operation && TargetInterfaces.Contains(called.DeclaringType!))
+                    else if (instruction.Method is MethodInfo operation && TargetInterfaces.Contains(operation.DeclaringType!))
                     {
-                        operations.Add((operation, previous == OpCodes.Ldc_I4_0 ? false : previous == OpCodes.Ldc_I4_1 ? true : null));
-                    }
-                    else if (called != null && called.Module == step.Module)
-                    {
-                        pending.Enqueue(called);
+                        operations.Add((operation, pushed));
                     }
 
-                    previous = opCode;
+                    if (LocalOf(instruction, StoreLocalOpCodes, OpCodes.Stloc_S, OpCodes.Stloc) is int stored)
+                    {
+                        locals[stored] = pushed;
+                    }
+
+                    pushed = instruction.OpCode == OpCodes.Ldc_I4_0 ? false
+                        : instruction.OpCode == OpCodes.Ldc_I4_1 ? true
+                        : LocalOf(instruction, LoadLocalOpCodes, OpCodes.Ldloc_S, OpCodes.Ldloc) is int loaded ? locals.GetValueOrDefault(loaded)
+                        : null;
                 }
             }
 
             return (properties, operations);
+        }
+
+        // What runs when a method is called: the method, the body of an async method or an iterator (its state machine), and
+        // the implementations and overrides of an interface, abstract or virtual method in the method's assembly.
+        private static IEnumerable<MethodBase> RunsOf(MethodBase method)
+        {
+            yield return method;
+            if (method.GetCustomAttribute<StateMachineAttribute>() is { } stateMachine)
+            {
+                yield return stateMachine.StateMachineType.GetMethod(nameof(IAsyncStateMachine.MoveNext), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+            }
+
+            if (method is not MethodInfo { IsVirtual: true, IsFinal: false, DeclaringType: { } declaringType } virtualMethod)
+            {
+                yield break;
+            }
+
+            foreach (var type in method.Module.GetTypes().Where(type => type != declaringType && !type.IsInterface && declaringType.IsAssignableFrom(type)))
+            {
+                if (declaringType.IsInterface)
+                {
+                    var map = type.GetInterfaceMap(declaringType);
+                    yield return map.TargetMethods[Array.IndexOf(map.InterfaceMethods, virtualMethod)];
+                    continue;
+                }
+
+                var baseDefinition = virtualMethod.GetBaseDefinition();
+                foreach (var candidate in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                    .Where(candidate => candidate.GetBaseDefinition().HasSameMetadataDefinitionAs(baseDefinition)))
+                {
+                    yield return candidate;
+                }
+            }
         }
 
         private static string SupportOf(IEnumerable<(MethodInfo Operation, bool? Last)> operations, Type app)
@@ -234,7 +306,7 @@ namespace TALXIS.TestKit.Bindings.Tests
                     return NotSupported;
                 }
 
-                if (Creates(implementation, typeof(NotSupportedException)))
+                if (MayCreate(implementation, typeof(NotSupportedException)))
                 {
                     support = Partly;
                 }
@@ -243,7 +315,27 @@ namespace TALXIS.TestKit.Bindings.Tests
             return support;
         }
 
-        // Whether a method creates an exception of a type (or calls a method that returns one, e.g. ModelDrivenApp.NotSupported).
+        // The implementation of an operation in the element that the app gives for the operation's interface (e.g.
+        // ModelDrivenEntity.SetValue for IEntity.SetValue): the class that the app's IAppUnderTest property creates or returns.
+        private static MethodInfo ImplementationOf(MethodInfo operation, Type app)
+        {
+            var target = operation.DeclaringType!;
+            var property = typeof(IAppUnderTest).GetProperties().Single(property => property.PropertyType == target).GetMethod!;
+            var appMap = app.GetInterfaceMap(typeof(IAppUnderTest));
+            var element = Walk(new[] { appMap.TargetMethods[Array.IndexOf(appMap.InterfaceMethods, property)] }, method => Callees(method).Where(callee => callee.DeclaringType == app))
+                .SelectMany(Callees)
+                .Select(callee => callee is MethodInfo method ? method.ReturnType : callee.DeclaringType!)
+                .Distinct()
+                .Single(type => type.IsClass && target.IsAssignableFrom(type));
+            var map = element.GetInterfaceMap(target);
+            return map.TargetMethods[Array.IndexOf(map.InterfaceMethods, operation)];
+        }
+
+        // Whether a method, or a method of its assembly that it calls, creates an exception of a type (or calls a method that
+        // returns one, e.g. ModelDrivenApp.NotSupported).
+        private static bool MayCreate(MethodBase method, Type exception) =>
+            Walk(new[] { method }, current => Callees(current).Where(callee => callee.Module == method.Module)).Any(current => Creates(current, exception));
+
         private static bool Creates(MethodBase method, Type exception) =>
             Instructions(method).Any(instruction => instruction.Method is ConstructorInfo constructor && constructor.DeclaringType == exception
                 || instruction.Method is MethodInfo called && called.ReturnType == exception);
@@ -252,24 +344,53 @@ namespace TALXIS.TestKit.Bindings.Tests
         private static bool AlwaysThrows(MethodBase method, Type exception) =>
             Creates(method, exception) && !Instructions(method).Any(instruction => instruction.OpCode == OpCodes.Ret);
 
-        // The implementation of an operation in the app's elements, e.g. ModelDrivenEntity.SetValue for IEntity.SetValue.
-        private static MethodInfo ImplementationOf(MethodInfo operation, Type app)
+        // The methods from the first ones on, each once, with the methods that next gives for each.
+        private static IEnumerable<MethodBase> Walk(IEnumerable<MethodBase> first, Func<MethodBase, IEnumerable<MethodBase>> next)
         {
-            var prefix = app == typeof(PortalApp) ? "Portal" : "ModelDriven";
-            var element = app.Assembly.GetTypes().Single(type => type.IsClass && type.Name.StartsWith(prefix, StringComparison.Ordinal) && operation.DeclaringType!.IsAssignableFrom(type));
-            var map = element.GetInterfaceMap(operation.DeclaringType!);
-            return map.TargetMethods[Array.IndexOf(map.InterfaceMethods, operation)];
+            var seen = new HashSet<MethodBase>();
+            var pending = new Queue<MethodBase>(first);
+            while (pending.TryDequeue(out var method))
+            {
+                if (!seen.Add(method))
+                {
+                    continue;
+                }
+
+                yield return method;
+                foreach (var following in next(method))
+                {
+                    pending.Enqueue(following);
+                }
+            }
         }
 
-        // The instructions of a method's IL, with the method that each call, newobj or ldftn refers to.
-        private static IEnumerable<(OpCode OpCode, MethodBase? Method)> Instructions(MethodBase method)
+        // The methods that a method calls, creates an instance with or makes a delegate of.
+        private static IEnumerable<MethodBase> Callees(MethodBase method) =>
+            Instructions(method).Select(instruction => instruction.Method).OfType<MethodBase>();
+
+        // The local that an instruction loads or stores, by one of its forms (the fixed forms are for locals 0 to 3).
+        private static int? LocalOf((OpCode OpCode, MethodBase? Method, int Operand) instruction, OpCode[] fixedForms, OpCode shortForm, OpCode longForm)
+        {
+            var fixedLocal = Array.IndexOf(fixedForms, instruction.OpCode);
+            return fixedLocal >= 0 ? fixedLocal : instruction.OpCode == shortForm || instruction.OpCode == longForm ? instruction.Operand : null;
+        }
+
+        // The instructions of a method's IL, with the method that each call, newobj or ldftn refers to and the index of the
+        // local or argument that an instruction with a variable operand refers to.
+        private static IEnumerable<(OpCode OpCode, MethodBase? Method, int Operand)> Instructions(MethodBase method)
         {
             var il = method.GetMethodBody()?.GetILAsByteArray() ?? Array.Empty<byte>();
             for (var offset = 0; offset < il.Length;)
             {
                 var opCode = il[offset] == 0xFE ? TwoByteOpCodes[(short)(0xFE00 | il[offset + 1])] : OneByteOpCodes[il[offset]];
                 offset += opCode.Size;
-                yield return (opCode, opCode.OperandType == OperandType.InlineMethod ? Resolve(method, BitConverter.ToInt32(il, offset)) : null);
+                yield return opCode.OperandType switch
+                {
+                    OperandType.InlineMethod => (opCode, Resolve(method, BitConverter.ToInt32(il, offset)), 0),
+                    OperandType.ShortInlineVar => (opCode, null, il[offset]),
+                    OperandType.InlineVar => (opCode, null, BitConverter.ToUInt16(il, offset)),
+                    _ => (opCode, null, 0),
+                };
                 offset += OperandSize(opCode.OperandType, il, offset);
             }
         }
@@ -318,6 +439,56 @@ namespace TALXIS.TestKit.Bindings.Tests
             }
 
             throw new FileNotFoundException($"No TALXIS.TestKit.sln above {AppContext.BaseDirectory}.");
+        }
+
+        private static MethodInfo FixtureStep(string name) =>
+            typeof(Fixtures).GetMethod(name, BindingFlags.Static | BindingFlags.NonPublic) ?? throw new MissingMethodException(nameof(Fixtures), name);
+
+        /// <summary>
+        /// The names of the app objects of <see cref="PowerAppsStepDefiner"/> (protected, so named here) and the steps that the
+        /// tests of the tracing work out; they are not bindings, so they are not in the table. They are only read, never run.
+        /// </summary>
+        private abstract class Fixtures : PowerAppsStepDefiner
+        {
+            internal const string AppGetter = "get_" + nameof(App);
+            internal const string XrmAppGetter = "get_" + nameof(XrmApp);
+            internal const string ModelDrivenAppGetter = "get_" + nameof(ModelDrivenApp);
+            internal const string PortalAppGetter = "get_" + nameof(PortalApp);
+
+            private static readonly IFixtureCheck PortalCheck = new PortalOnlyCheck();
+
+            internal static PortalApp Portal => PortalApp;
+
+            internal static async Task ChecksAnEnabledCommandAsync()
+            {
+                await Task.Yield();
+                _ = App.SubGrid.IsCommandEnabled("Subgrid", "Command", enabled: true);
+            }
+
+            internal static bool ChecksADisabledCommandThroughALocal()
+            {
+                var enabled = false;
+                return App.SubGrid.IsCommandEnabled("Subgrid", "Command", enabled);
+            }
+
+            internal static void ChecksThroughAnInterface() => PortalCheck.Check();
+
+            internal static void RefusesSomeValuesInAHelper(bool value) => Refuse(value);
+
+            internal static bool AcceptsEveryValue(bool value) => value || !value;
+
+            private static void Refuse(bool value)
+            {
+                if (!value)
+                {
+                    throw new NotSupportedException("The value is not supported.");
+                }
+            }
+        }
+
+        private sealed class PortalOnlyCheck : IFixtureCheck
+        {
+            public void Check() => _ = Fixtures.Portal.SubGrid.IsCommandShown("Subgrid", "Command", shown: true);
         }
     }
 }
