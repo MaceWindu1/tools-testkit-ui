@@ -77,9 +77,21 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         {
             return Client.Execute(Client.GetNoRetryOptions($"Set Portal Field Value: {field}"), driver =>
             {
+                // A field's control (a PCF) can render after its cell, e.g. right after a dialog opens; until then the
+                // cell does not show whether it is a lookup, an option set or a text field.
+                if (!WaitForField(driver, field, HasValueControl, RenderTimeout))
+                    throw new NoSuchElementException($"The '{field}' field shows no control to enter a value into.");
+
                 SetValue(driver, FindField(driver, field), value);
                 return true;
             });
+        }
+
+        private static bool HasValueControl(IWebElement cell)
+        {
+            return cell.FindElements(PortalFormElementsLocators.LookupControl).Count > 0
+                || cell.FindElements(PortalFormElementsLocators.OptionSetInput).Count > 0
+                || cell.FindElements(PortalFormElementsLocators.TextInput).Count > 0;
         }
 
         internal BrowserCommandResult<string> GetValue(string field, string expected, TimeSpan timeout)

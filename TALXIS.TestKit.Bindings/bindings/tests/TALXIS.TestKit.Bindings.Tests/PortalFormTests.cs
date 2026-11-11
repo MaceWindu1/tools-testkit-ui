@@ -75,6 +75,19 @@ namespace TALXIS.TestKit.Bindings.Tests
         }
 
         [TestMethod]
+        public void WaitsForTheControlOfAFieldBeforeEnteringItsValue()
+        {
+            // The cell renders first and its control (a PCF) a moment later, as right after a dialog opens.
+            PortalTestPage.Run(
+                "document.body.insertAdjacentHTML('beforeend', '<div class=\"TALXIS__form__cell\"><label class=\"TALXIS__form__cell__label\" title=\"Note\">Note</label><div data-id=\"talxis_note.fieldControl_container\"></div></div>');"
+                + " setTimeout(() => document.querySelector('[data-id=\"talxis_note.fieldControl_container\"]').innerHTML = '<input class=\"ms-TextField-field\">', 1000);");
+
+            new PortalApp(PortalTestPage.Client()).Entity.SetValue("Note", "Signed by hand");
+
+            Assert.AreEqual("Signed by hand", ((IJavaScriptExecutor)this.driver).ExecuteScript("return document.querySelector('[data-id=\"talxis_note.fieldControl_container\"] input').value;"));
+        }
+
+        [TestMethod]
         public void ReadsTheFieldsOfANestedForm()
         {
             Assert.AreEqual("Open request", PortalFormManager.GetValue(PortalFormManager.TryFindField(this.driver, "Subject")));
