@@ -52,6 +52,7 @@
         /// </summary>
         /// <param name="recordAlias">The alias of the test record.</param>
         /// <returns>A reference to the created record.</returns>
+        /// <exception cref="System.ArgumentException">No test record has the alias.</exception>
         EntityReference GetTestRecordReference(string recordAlias);
     }
 }

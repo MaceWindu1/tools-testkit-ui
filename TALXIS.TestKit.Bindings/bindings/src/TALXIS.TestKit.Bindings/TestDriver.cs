@@ -145,6 +145,10 @@
         public EntityReference GetTestRecordReference(string recordAlias)
         {
             var obj = (Dictionary<string, object>)this.ExecuteDriverFunction($"getRecordReference('{recordAlias}')");
+            if (obj == null)
+            {
+                throw new ArgumentException($"Test record with alias '{recordAlias}' does not exist.", nameof(recordAlias));
+            }
 
             return new EntityReference((string)obj["entityType"], Guid.Parse((string)obj["id"]));
         }
