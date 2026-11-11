@@ -174,15 +174,22 @@ namespace TALXIS.TestKit.Bindings.Tests
         }
 
         [TestMethod]
-        public void OpensARecordInItsForm()
+        public void OpensARecordAndWaitsForItsFormToShowIt()
         {
             var recordId = Guid.NewGuid();
+
+            // openForm settles before the form has loaded the record.
             ((IJavaScriptExecutor)this.driver).ExecuteScript(
-                "window.Xrm.Navigation = { openForm: options => { document.body.dataset.opened = options.entityName + ' ' + options.entityId; return Promise.resolve({}); } };");
+                "window.Xrm.Navigation = { openForm: options => {"
+                + " document.body.dataset.opened = options.entityName + ' ' + options.entityId;"
+                + " setTimeout(() => { window.Xrm.Page.data = { entity: { getId: () => '{' + options.entityId.toUpperCase() + '}' } }; document.body.dataset.loaded = 'true'; }, 500);"
+                + " return Promise.resolve({}); } };");
 
             this.app.Navigation.OpenRecord("account", recordId);
 
-            Assert.AreEqual($"account {recordId}", this.driver.FindElement(By.TagName("body")).GetAttribute("data-opened"));
+            var body = this.driver.FindElement(By.TagName("body"));
+            Assert.AreEqual($"account {recordId}", body.GetAttribute("data-opened"));
+            Assert.AreEqual("true", body.GetAttribute("data-loaded"));
         }
 
         [TestMethod]
@@ -194,6 +201,40 @@ namespace TALXIS.TestKit.Bindings.Tests
             var error = Assert.ThrowsException<WebDriverException>(() => this.app.Navigation.OpenRecord("account", Guid.NewGuid()));
 
             StringAssert.Contains(error.Message, "The record was not found.");
+        }
+
+        [TestMethod]
+        public void ReportsAFormThatDoesNotOpen()
+        {
+            var recordId = Guid.NewGuid();
+            ((IJavaScriptExecutor)this.driver).ExecuteScript("window.Xrm.Navigation = { openForm: () => new Promise(() => {}) };");
+            var timeouts = this.driver.Manage().Timeouts();
+            var scriptTimeout = timeouts.AsynchronousJavaScript;
+            timeouts.AsynchronousJavaScript = TimeSpan.FromSeconds(1);
+            try
+            {
+                var error = Assert.ThrowsException<WebDriverTimeoutException>(() => this.app.Navigation.OpenRecord("account", recordId));
+
+                StringAssert.Contains(error.Message, $"Opening the account record {recordId} did not finish");
+            }
+            finally
+            {
+                timeouts.AsynchronousJavaScript = scriptTimeout;
+            }
+        }
+
+        [TestMethod]
+        public void ReportsAFormThatDoesNotShowTheRecord()
+        {
+            var recordId = Guid.NewGuid();
+            ((IJavaScriptExecutor)this.driver).ExecuteScript(
+                "window.Xrm.Navigation = { openForm: () => Promise.resolve({}) };"
+                + " window.Xrm.Page.data = { entity: { getId: () => '{A1B2C3D4-0000-0000-0000-000000000003}' } };");
+
+            var error = Assert.ThrowsException<WebDriverTimeoutException>(
+                () => new NavigationManager(PortalTestPage.Client()).OpenRecord("account", recordId, TimeSpan.FromSeconds(1)));
+
+            StringAssert.Contains(error.Message, $"The form did not show the account record {recordId}.");
         }
 
         [TestMethod]
