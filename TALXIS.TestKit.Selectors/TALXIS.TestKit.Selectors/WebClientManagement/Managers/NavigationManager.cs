@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
 using TALXIS.TestKit.Selectors.DTO.Locators;
 using TALXIS.TestKit.Selectors.Browser;
 
@@ -395,21 +396,43 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             });
         }
 
-        internal BrowserCommandResult<bool> OpenRecord(string entityName, Guid recordId)
+        // Xrm.Navigation.openForm opens the form within the app, as a user does. EntityManager.OpenEntity loads the app
+        // again from the record's URL instead, which takes longer and drops what the page holds (e.g. the test driver).
+        internal BrowserCommandResult<bool> OpenRecord(string entityName, Guid recordId, TimeSpan? timeout = null)
         {
             return Client.Execute(Client.GetNoRetryOptions($"Open Record: {entityName} {recordId}"), driver =>
             {
-                // Xrm.Navigation.openForm resolves once the form has opened.
-                var error = ((IJavaScriptExecutor)driver).ExecuteAsyncScript(
-                    @"const [entityName, entityId, done] = arguments;
-                      Xrm.Navigation.openForm({ entityName, entityId })
-                          .then(() => done(null), error => done((error && error.message) || String(error)));",
-                    entityName,
-                    recordId.ToString());
+                var javaScript = (IJavaScriptExecutor)driver;
+                object error;
+                try
+                {
+                    // Xrm.Navigation.openForm settles once the app has navigated to the form.
+                    error = javaScript.ExecuteAsyncScript(
+                        @"const [entityName, entityId, done] = arguments;
+                          Xrm.Navigation.openForm({ entityName, entityId })
+                              .then(() => done(null), error => done((error && error.message) || String(error)));",
+                        entityName,
+                        recordId.ToString());
+                }
+                catch (WebDriverTimeoutException exception)
+                {
+                    throw new WebDriverTimeoutException(
+                        $"Opening the {entityName} record {recordId} did not finish: the app did not navigate to its form, "
+                        + "e.g. because the open form asks whether to save its unsaved changes.",
+                        exception);
+                }
+
                 if (error != null)
                     throw new WebDriverException($"Opening the {entityName} record {recordId} failed: {error}");
 
                 driver.WaitForTransaction();
+
+                // The form can still be loading the record when openForm settles.
+                new WebDriverWait(driver, timeout ?? Constants.DefaultTimeout) { Message = $"The form did not show the {entityName} record {recordId}." }
+                    .Until(_ => (bool)javaScript.ExecuteScript(
+                        @"const entity = window.Xrm && Xrm.Page && Xrm.Page.data && Xrm.Page.data.entity;
+                          return !!entity && entity.getId().replace(/[{}]/g, '').toLowerCase() === arguments[0];",
+                        recordId.ToString()));
                 return true;
             });
         }
