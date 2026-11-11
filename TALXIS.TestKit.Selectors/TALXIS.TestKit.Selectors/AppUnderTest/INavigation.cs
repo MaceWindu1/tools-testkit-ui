@@ -1,5 +1,7 @@
 namespace TALXIS.TestKit.Selectors
 {
+    using System;
+
     /// <summary>
     /// The navigation (site map) of the app under test. Items are named by their label.
     /// </summary>
@@ -29,5 +31,14 @@ namespace TALXIS.TestKit.Selectors
         /// <param name="message">The expected message.</param>
         /// <returns>Whether the item is disabled with the message.</returns>
         bool IsSubAreaDisabled(string label, string message);
+
+        /// <summary>
+        /// Opens a record in its form and waits for the form. Only a model-driven app opens a record by its id: a TALXIS
+        /// Portal shows a record in the form of the page that lists it, so a test opens it as a user does (the page, then
+        /// the record in its subgrid).
+        /// </summary>
+        /// <param name="entityName">The logical name of the record's table.</param>
+        /// <param name="recordId">The record's id.</param>
+        void OpenRecord(string entityName, Guid recordId);
     }
 }

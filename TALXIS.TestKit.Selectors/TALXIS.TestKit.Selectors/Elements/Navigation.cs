@@ -1,5 +1,6 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
+using System;
 using OpenQA.Selenium;
 using TALXIS.TestKit.Selectors.WebClientManagement;
 using TALXIS.TestKit.Selectors.Browser;
@@ -16,6 +17,16 @@ namespace TALXIS.TestKit.Selectors
         {
             _navigationManager = new NavigationManager(client);
             _timelineManager = new TimelineManager(client);
+        }
+
+        /// <summary>
+        /// Opens a record in its form (Xrm.Navigation.openForm) and waits for the form.
+        /// </summary>
+        /// <param name="entityName">The logical name of the record's table.</param>
+        /// <param name="recordId">The record's id.</param>
+        public void OpenRecord(string entityName, Guid recordId)
+        {
+            _navigationManager.OpenRecord(entityName, recordId);
         }
 
         /// <summary>

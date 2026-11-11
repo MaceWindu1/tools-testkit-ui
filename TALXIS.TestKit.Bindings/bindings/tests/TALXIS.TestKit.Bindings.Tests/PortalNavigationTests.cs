@@ -4,6 +4,7 @@ namespace TALXIS.TestKit.Bindings.Tests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using OpenQA.Selenium;
     using TALXIS.TestKit.Bindings.Extensions;
+    using TALXIS.TestKit.Selectors;
     using TALXIS.TestKit.Selectors.WebClientManagement;
 
     [TestClass]
@@ -31,6 +32,14 @@ namespace TALXIS.TestKit.Bindings.Tests
 
             var error = Assert.ThrowsException<InvalidOperationException>(() => PortalPageManager.WaitForReady(this.driver, TimeSpan.FromSeconds(5), "Not ready."));
             StringAssert.Contains(error.Message, "Configuration failed");
+        }
+
+        [TestMethod]
+        public void RefusesToOpenARecordByItsId()
+        {
+            var navigation = new PortalApp(PortalTestPage.Client()).Navigation;
+
+            Assert.ThrowsException<NotSupportedException>(() => navigation.OpenRecord("contact", Guid.NewGuid()));
         }
 
         [TestMethod]

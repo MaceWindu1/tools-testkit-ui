@@ -395,6 +395,25 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             });
         }
 
+        internal BrowserCommandResult<bool> OpenRecord(string entityName, Guid recordId)
+        {
+            return Client.Execute(Client.GetNoRetryOptions($"Open Record: {entityName} {recordId}"), driver =>
+            {
+                // Xrm.Navigation.openForm resolves once the form has opened.
+                var error = ((IJavaScriptExecutor)driver).ExecuteAsyncScript(
+                    @"const [entityName, entityId, done] = arguments;
+                      Xrm.Navigation.openForm({ entityName, entityId })
+                          .then(() => done(null), error => done((error && error.message) || String(error)));",
+                    entityName,
+                    recordId.ToString());
+                if (error != null)
+                    throw new WebDriverException($"Opening the {entityName} record {recordId} failed: {error}");
+
+                driver.WaitForTransaction();
+                return true;
+            });
+        }
+
         internal BrowserCommandResult<bool> OpenSubArea(string area, string subarea, int thinkTime = Constants.DefaultThinkTime)
         {
             return Client.Execute(Client.GetOptions("Open Sub Area"), driver =>

@@ -19,9 +19,8 @@
         [Given(@"I have opened '(.*)'")]
         public static void GivenIHaveOpened(string alias)
         {
-            TestDriver.OpenTestRecord(alias);
-
-            Driver.WaitForTransaction();
+            var record = TestDriver.GetTestRecordReference(alias);
+            App.Navigation.OpenRecord(record.LogicalName, record.Id);
         }
 
         /// <summary>

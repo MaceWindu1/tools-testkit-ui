@@ -174,6 +174,29 @@ namespace TALXIS.TestKit.Bindings.Tests
         }
 
         [TestMethod]
+        public void OpensARecordInItsForm()
+        {
+            var recordId = Guid.NewGuid();
+            ((IJavaScriptExecutor)this.driver).ExecuteScript(
+                "window.Xrm.Navigation = { openForm: options => { document.body.dataset.opened = options.entityName + ' ' + options.entityId; return Promise.resolve({}); } };");
+
+            this.app.Navigation.OpenRecord("account", recordId);
+
+            Assert.AreEqual($"account {recordId}", this.driver.FindElement(By.TagName("body")).GetAttribute("data-opened"));
+        }
+
+        [TestMethod]
+        public void ReportsARecordThatCannotBeOpened()
+        {
+            ((IJavaScriptExecutor)this.driver).ExecuteScript(
+                "window.Xrm.Navigation = { openForm: () => Promise.reject(new Error('The record was not found.')) };");
+
+            var error = Assert.ThrowsException<WebDriverException>(() => this.app.Navigation.OpenRecord("account", Guid.NewGuid()));
+
+            StringAssert.Contains(error.Message, "The record was not found.");
+        }
+
+        [TestMethod]
         public void AHiddenFieldIsNotEditableEvenWhenItIsNotReadOnly()
         {
             Assert.IsTrue(this.app.Entity.IsFieldEditable("Email frequency", editable: false));

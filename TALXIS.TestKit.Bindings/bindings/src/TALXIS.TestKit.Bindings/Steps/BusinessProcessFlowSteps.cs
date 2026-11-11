@@ -143,7 +143,7 @@
         [Then(@"the record should be in the '(.*)' stage of the business process flow")]
         public static void ThenTheRecordShouldBeInTheStageOfTheBusinessProcessFlow(string stage)
         {
-            // XrmApp.BusinessProcessFlow
+            throw new NotImplementedException($"Checking that the record is in the '{stage}' stage of the business process flow is not implemented.");
         }
 
         private static void SetFieldValue(string fieldName, string fieldValue)
