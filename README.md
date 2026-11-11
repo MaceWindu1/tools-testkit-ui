@@ -186,6 +186,8 @@ B2C does not return to the portal, e.g. after its own error), with what the port
 - A failed scenario saves a screenshot, the page's HTML and the browser's console (Chrome) in the `screenshots`
   folder next to the tests.
 - Values of tab labels, dialog titles and field values can reference parameters (`{{Parameter:Name}}`, see below).
+- A test record cannot be opened by its id: the portal shows a record in the form of the page that lists it, so
+  `I have opened '<alias>'` fails with a `NotSupportedException`. Open the page and select the record in its subgrid.
 - What the signed-in user may read: `I should be able to read '<alias>'` and `I should not be able to read '<alias>'`
   query a test record through the page's `Xrm.WebApi`, to which the portal applies its retrieve filters as it does to
   every page (in a model-driven app, the user's security roles apply). A record the query does not return is not

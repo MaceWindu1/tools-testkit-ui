@@ -25,5 +25,8 @@ namespace TALXIS.TestKit.Selectors
 
         /// <inheritdoc/>
         public bool IsSubAreaDisabled(string label, string message) => throw ModelDrivenApp.NotSupported("Disabling a navigation item");
+
+        /// <inheritdoc/>
+        public void OpenRecord(string entityName, Guid recordId) => _xrmApp.Navigation.OpenRecord(entityName, recordId);
     }
 }
