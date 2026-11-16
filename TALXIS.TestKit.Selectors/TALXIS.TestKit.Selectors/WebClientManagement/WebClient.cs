@@ -34,7 +34,7 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             {
                 bool isElementFound = driver.TryFindElement(By.XPath("html"), out IWebElement element);
 
-                element.Click();
+                if (isElementFound) element.Click();
 
                 return isElementFound;
             });
