@@ -268,13 +268,13 @@ namespace TALXIS.TestKit.Bindings.Tests
         [TestMethod]
         public void TellsWhetherTheNewLookIsOn()
         {
-            Assert.IsTrue(NavigationManager.IsNewLookEnabled(this.driver));
+            Assert.IsTrue(this.xrmApp.Navigation.IsNewLookEnabled());
 
             ((IJavaScriptExecutor)this.driver).ExecuteScript("document.querySelector('button.ms-Toggle-background').setAttribute('aria-checked', 'false');");
-            Assert.IsFalse(NavigationManager.IsNewLookEnabled(this.driver));
+            Assert.IsFalse(this.xrmApp.Navigation.IsNewLookEnabled());
 
             ((IJavaScriptExecutor)this.driver).ExecuteScript("document.querySelector('button.ms-Toggle-background').remove();");
-            Assert.IsTrue(NavigationManager.IsNewLookEnabled(this.driver), "An app without the toggle has only the new look.");
+            Assert.IsTrue(this.xrmApp.Navigation.IsNewLookEnabled(), "An app without the toggle has only the new look.");
         }
 
         private string ClickedCommand() => this.driver.FindElement(By.TagName("body")).GetAttribute("data-clicked");

@@ -76,6 +76,14 @@ namespace TALXIS.TestKit.Selectors
             return _navigationManager.IsSubAreaVisible(subArea);
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the app shows the new look: its toggle is on, or the app has no toggle.
+        /// </summary>
+        public bool IsNewLookEnabled()
+        {
+            return _navigationManager.IsNewLookEnabled();
+        }
+
         public IWebElement GetSubAreaElement(string subArea)
         {
             return _navigationManager.GetSubAreaElement(subArea);
