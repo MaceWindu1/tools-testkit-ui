@@ -779,13 +779,21 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
                                 driver.Perform(action, emptyDiv, null);
                                 break;
                             case Grid.GridType.PowerAppsGridControl:
+                                if (checkRecord)
+                                {
+                                    // Selecting ticks the row's checkbox (its __row_status cell); the link would open it.
+                                    cell.FindElement(By.XPath(".//div[@col-id='__row_status']//label")).Click();
+                                    break;
+                                }
+
+                                // Relative to the row: '//a' would find the first row's link on the page.
                                 try
                                 {
-                                    cell.FindElement(By.XPath("//a[contains(@aria-label,'Read only')]")).Click();
+                                    cell.FindElement(By.XPath(".//a[contains(@aria-label,'Read only')]")).Click();
                                 }
                                 catch
                                 {
-                                    cell.FindElement(By.XPath("//a[contains(@role,'link')]")).Click();
+                                    cell.FindElement(By.XPath(".//a[contains(@role,'link')]")).Click();
                                 }
 
                                 break;
@@ -822,17 +830,8 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
                     Actions actions = new Actions(driver);
                     actions.MoveToElement(subGrid).Perform();
 
-                    IWebElement gridRow = null;
-                    if (index + 1 < subGridRecordRows.Count)
-                    {
-                        gridRow = subGridRecordRows[index];
-                    }
-                    else
-                    {
-                        var grid = driver.FindElement(By.XPath("//div[@ref='eViewport']"));
-                        actions.DoubleClick(gridRow).Perform();
-                        driver.WaitForTransaction();
-                    }
+                    // The row with that row-index: the grid does not keep its rows in the page in row order.
+                    var gridRow = subGridRecordRows.FirstOrDefault(r => r.GetAttribute("row-index") == index.ToString());
                     if (gridRow == null)
                         throw new IndexOutOfRangeException($"Subgrid {subgridName} record count: {subGridRecordRows.Count}. Expected: {index + 1}");
 
