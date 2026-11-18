@@ -1037,12 +1037,16 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
                 if (!found)
                 {
                     found = fieldContainer.TryFindElement(By.TagName("iframe"), out input);
-                    SetValueHelper.SetValue(Client, Reference.Timeline.NoteText, value, "iframe");
-                    return true;
+                    if (found)
+                    {
+                        SetValueHelper.SetValue(Client, Reference.Timeline.NoteText, value, "iframe");
+                        return true;
+                    }
                 }
 
+                // E.g. a two-option column: it has no text input and no empty value.
                 if (!found)
-                    throw new NoSuchElementException($"Field with name {field} does not exist.");
+                    throw new NoSuchElementException($"Field with name {field} has no text input to set or clear.");
 
                 SetInputValue(driver, input, value);
 
@@ -1524,7 +1528,8 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             // Do this to ensure that the static placeholder '---' is removed 
             driver.RepeatUntil(() =>
             {
-                input.Clear();
+                // No input.Clear(): it empties the input without the input events the form's control listens to, so
+                // the control keeps (and restores) its old value, and a cleared field is not cleared.
                 input.Click();
                 input.SendKeys(Keys.Control + "a");
                 input.SendKeys(Keys.Control + "a");
@@ -1537,6 +1542,9 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
                 failureCallback: () => throw new InvalidOperationException($"Timeout after 10 seconds. Expected: {value}. Actual: {input.GetAttribute("value")}")
             );
 
+            // The field's control commits what was typed only when the input loses focus: until then the form (and a save)
+            // still has the old value, and an emptied field keeps it.
+            ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].blur();", input);
             driver.WaitForTransaction();
         }
 
@@ -1727,6 +1735,11 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
                         dateField.SendKeys(date);
                         dateField.SendKeys(Keys.Tab);
                     }
+                    else
+                    {
+                        // Leaving the field commits the empty value, as Tab commits a typed date.
+                        ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].blur();", dateField);
+                    }
                 },
                 d => dateField.GetAttribute("value").IsValueEqualsTo(date),
                 TimeSpan.FromSeconds(9), 3,
@@ -1735,27 +1748,34 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             }
             else
             {
+                // The field's container: check the input inside it. The container has no value, which reads as
+                // empty, so a clear would otherwise count as done before anything was typed.
+                var input = dateField.FindElement(By.TagName("input"));
                 driver.RepeatUntil(() =>
                 {
                     dateField.Click(true);
                     if (date != null)
                     {
-                        dateField = dateField.FindElement(By.TagName("input"));
-
                         // Only send Keys.Escape to avoid element not interactable exceptions with calendar flyout on forms.
                         // This can cause the Header or BPF flyouts to close unexpectedly
                         if (formContextType == FormContextType.Entity || formContextType == FormContextType.QuickCreate)
                         {
-                            dateField.SendKeys(Keys.Escape);
+                            input.SendKeys(Keys.Escape);
                         }
 
-                        ClearFieldValue(dateField);
-                        dateField.SendKeys(date);
+                        ClearFieldValue(input);
+                        input.SendKeys(date);
+                    }
+                    else
+                    {
+                        // Clearing: empty the date input and leave it, which commits the empty value.
+                        ClearFieldValue(input);
+                        ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].blur();", input);
                     }
                 },
-                    d => dateField.GetAttribute("value").IsValueEqualsTo(date),
+                    d => input.GetAttribute("value").IsValueEqualsTo(date),
                     TimeSpan.FromSeconds(9), 3,
-                    failureCallback: () => throw new InvalidOperationException($"Timeout after 10 seconds. Expected: {date}. Actual: {dateField.GetAttribute("value")}")
+                    failureCallback: () => throw new InvalidOperationException($"Timeout after 10 seconds. Expected: {date}. Actual: {input.GetAttribute("value")}")
                 );
             }
         }
