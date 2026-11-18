@@ -117,7 +117,7 @@ namespace TALXIS.TestKit.Selectors
         /// <inheritdoc/>
         public bool HasAlertTitle(string title, out string actual)
         {
-            actual = _xrmApp.Dialogs.GetAlertDialogMessageText();
+            actual = _xrmApp.Dialogs.GetAlertDialogTitleText();
             return actual == title;
         }
 

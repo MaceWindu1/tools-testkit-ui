@@ -39,6 +39,11 @@ namespace TALXIS.TestKit.Selectors
             return _dialogsManager.GetAlertDialogMessageText();
         }
 
+        public string GetAlertDialogTitleText()
+        {
+            return _dialogsManager.GetAlertDialogTitleText();
+        }
+
         public bool IsDialogVisible()
         {
             return _dialogsManager.IsDialogVisible();

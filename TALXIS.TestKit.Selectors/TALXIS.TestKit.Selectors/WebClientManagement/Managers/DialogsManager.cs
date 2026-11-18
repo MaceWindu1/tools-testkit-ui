@@ -277,15 +277,27 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
         {
             return Client.Execute<string>(Client.GetOptions("Get Current Dialog Lable"), driver =>
             {
-                var dialog = driver.FindElement(By.XPath("//div[@role='dialog']"));
-
-                if(dialog is null)
-                {
-                    return string.Empty;
-                }
-
-                return dialog.GetAttribute("aria-label");
+                var dialog = GetDisplayedDialog(driver);
+                return dialog == null ? string.Empty : GetAccessibleName(driver, dialog);
             });
+        }
+
+        // A dialog names itself with aria-label or, in the current UI, with aria-labelledby pointing at its heading.
+        private static string GetAccessibleName(IWebDriver driver, IWebElement dialog)
+        {
+            var label = dialog.GetAttribute("aria-label");
+            if (!string.IsNullOrEmpty(label))
+                return label;
+
+            var labelledBy = dialog.GetAttribute("aria-labelledby");
+            if (string.IsNullOrEmpty(labelledBy))
+                return string.Empty;
+
+            var parts = labelledBy.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .SelectMany(id => driver.FindElements(By.Id(id)))
+                .Select(element => element.GetAttribute("textContent")?.Trim())
+                .Where(text => !string.IsNullOrEmpty(text));
+            return string.Join(" ", parts);
         }
 
         internal BrowserCommandResult<IWebElement> GetAlertDialog()
@@ -327,12 +339,17 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
             {
                 var dialog = driver.FindElement(By.XPath("//div[@data-id='alertdialog']"));
 
-                if (dialog is null)
-                {
-                    return string.Empty;
-                }
+                // The message is a span in the current UI, a div in older ones.
+                return dialog.FindElement(By.XPath(".//*[@data-id='dialogMessageText']")).Text;
+            });
+        }
 
-                return driver.FindElement(By.XPath("//div[@data-id='dialogMessageText']")).Text;
+        internal string GetAlertDialogTitleText()
+        {
+            return Client.Execute<string>(Client.GetOptions("Get Alert Dialog Title Text"), driver =>
+            {
+                var dialog = driver.FindElement(By.XPath("//div[@data-id='alertdialog']"));
+                return dialog.FindElement(By.XPath(".//*[@data-id='dialogTitleText']")).Text;
             });
         }
 
