@@ -9,6 +9,9 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
 {
     internal class DialogHelper
     {
+        // How long a dialog that a click has just opened may take to render in the page.
+        private static readonly TimeSpan InPageDialogTimeout = TimeSpan.FromSeconds(5);
+
         internal static BrowserCommandResult<bool> AssignDialog(Dialogs.AssignTo to, WebClient client, string userOrTeamName = null)
         {
             return client.Execute(client.GetOptions($"Assign to User or Team Dialog"), driver =>
@@ -75,25 +78,13 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
             //Passing true clicks the confirm button.  Passing false clicks the Cancel button.
             return client.Execute(client.GetOptions($"Confirm or Cancel Confirmation Dialog"), driver =>
             {
-                var inlineDialog = SwitchToDialog(client);
-                if (inlineDialog)
-                {
-                    //Wait until the buttons are available to click
-                    var dialogFooter = driver.WaitUntilAvailable(DialogsElementsLocators.ConfirmButton);
+                if (!SwitchToDialog(client))
+                    throw new InvalidOperationException("No confirmation dialog is displayed.");
 
-                    if (
-                        !(dialogFooter?.FindElements(DialogsElementsLocators.ConfirmButton).Count >
-                          0)) return true;
-
-                    //Click the Confirm or Cancel button
-                    IWebElement buttonToClick;
-                    if (ClickConfirmButton)
-                        buttonToClick = dialogFooter.FindElement(DialogsElementsLocators.ConfirmButton);
-                    else
-                        buttonToClick = dialogFooter.FindElement(DialogsElementsLocators.CancelButton);
-
-                    buttonToClick.Click();
-                }
+                driver.ClickWhenAvailable(
+                    ClickConfirmButton ? DialogsElementsLocators.ConfirmButton : DialogsElementsLocators.CancelButton,
+                    TimeSpan.FromSeconds(5),
+                    $"The confirmation dialog has no {(ClickConfirmButton ? "confirm" : "cancel")} button.");
 
                 return true;
             });
@@ -117,10 +108,12 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
                     d => { client.Browser.Driver.SwitchTo().Frame(Elements.ElementId[Reference.Frames.DialogFrameId].Replace("[INDEX]", index)); });
                 return true;
             }
-            else
-            {
-                return SwitchToPopup(client);
-            }
+
+            // The current UI renders its dialogs in the page itself: nothing to switch to.
+            if (client.Browser.Driver.WaitUntilAvailable(DialogsElementsLocators.InPageDialog, InPageDialogTimeout) != null)
+                return true;
+
+            return SwitchToPopup(client);
         }
         private static bool SwitchToPopup(WebClient client)
         {

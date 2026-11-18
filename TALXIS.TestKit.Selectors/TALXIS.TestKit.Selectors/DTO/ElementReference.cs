@@ -39,7 +39,7 @@ namespace TALXIS.TestKit.Selectors
             { "Dialog_RoleLookupButton",  "id(\"record2roleid\")" },
             { "Dialog_RoleLookupTable",   "id(\"record2roleid_IMenu\")" },
             { "Dialog_WarningFooter" , "//*[@id=\"crmDialogFooter\"]" },
-            { "Dialog_WarningCloseButton", "//*[@id=\"butBegin\"]" },
+            { "Dialog_WarningCloseButton", "//button[@data-id=\"okButton\" or @id=\"butBegin\"]" },
            
 
             //GuidedHelp

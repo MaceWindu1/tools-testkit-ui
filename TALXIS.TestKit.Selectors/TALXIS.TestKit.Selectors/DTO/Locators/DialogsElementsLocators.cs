@@ -26,6 +26,7 @@ namespace TALXIS.TestKit.Selectors.DTO.Locators
         internal static By AssignDialogUserTeamLookupResults => By.XPath(AppElements.Xpath[AppReference.Dialogs.AssignDialogUserTeamLookupResults]);
         internal static By AssignDialogOKButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.AssignDialogOKButton]);
         internal static By AssignDialogToggle => By.XPath(AppElements.Xpath[AppReference.Dialogs.AssignDialogToggle]);
+        internal static By InPageDialog => By.XPath(AppElements.Xpath[AppReference.Dialogs.InPageDialog]);
         internal static By ConfirmButton => By.XPath(AppElements.Xpath[AppReference.Dialogs.ConfirmButton]);
         internal static By Displayed => By.XPath(AppElements.Xpath[AppReference.Dialogs.Displayed]);
         internal static By ButtonByLabel(string label) => By.XPath(AppElements.Xpath[AppReference.Dialogs.ButtonByLabel].Replace("[LABEL]", label.ToXPathLiteral()));

@@ -295,6 +295,7 @@ namespace TALXIS.TestKit.Selectors
             public static string AssignDialogUserTeamLookupResults = "AssignDialog_UserTeamLookupResults";
             public static string AssignDialogOKButton = "AssignDialog_OKButton";
             public static string AssignDialogToggle = "AssignDialog_ToggleField";
+            public static string InPageDialog = "Dialog_InPageDialog";
             public static string ConfirmButton = "Dialog_ConfirmButton";
             public static string CancelButton = "Dialog_CancelButton";
             public static string OkButton = "Dialog_OkButton";
@@ -700,8 +701,11 @@ namespace TALXIS.TestKit.Selectors
             { "Dialog_ActualRevenue", "//input[contains(@data-id,'actualrevenue_id')]" },
             { "Dialog_CloseDate", "//input[contains(@data-id,'closedate_id')]" },
             { "Dialog_DescriptionId", "//input[contains(@data-id,'description_id')]" },
-            { "Dialog_ConfirmButton" , "//*[@id=\"confirmButton\"]" },
-            { "Dialog_CancelButton" , "//*[@id=\"cancelButton\"]" },
+            // A dialog of the app rendered in the page (confirm, alert, set state, assign ...), not a Fluent popover.
+            { "Dialog_InPageDialog" , "//div[@role=\"dialog\" and @aria-modal=\"true\" and (starts-with(@id,\"modalDialogView\") or starts-with(@id,\"dialogView\"))]" },
+            // The buttons' ids carry a suffix (confirmButton_2); their data-id does not.
+            { "Dialog_ConfirmButton" , "//button[@data-id=\"confirmButton\" or @id=\"confirmButton\"]" },
+            { "Dialog_CancelButton" , "//button[@data-id=\"cancelButton\" or @id=\"cancelButton\"]" },
             { "Dialog_OkButton" , "//*[@id=\"okButton\"]" },
             { "DuplicateDetectionDialog_IgnoreAndSaveButton" , "//button[contains(@data-id, 'ignore_save')]" },
             { "DuplicateDetectionDialog_CancelButton" , "//button[contains(@data-id, 'close_dialog')]" },

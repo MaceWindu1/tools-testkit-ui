@@ -64,17 +64,11 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
         {
             return Client.Execute(Client.GetOptions($"Close Warning Dialog"), driver =>
             {
-                var inlineDialog = this.SwitchToDialog();
-                if (inlineDialog)
-                {
-                    var dialogFooter = driver.WaitUntilAvailable(By.XPath(Elements.Xpath[Reference.Dialogs.WarningFooter]));
+                if (!this.SwitchToDialog())
+                    throw new InvalidOperationException("No alert dialog is displayed.");
 
-                    if (
-                        !(dialogFooter?.FindElements(By.XPath(Elements.Xpath[Reference.Dialogs.WarningCloseButton])).Count >
-                          0)) return true;
-                    var closeBtn = dialogFooter.FindElement(By.XPath(Elements.Xpath[Reference.Dialogs.WarningCloseButton]));
-                    closeBtn.Click();
-                }
+                driver.ClickWhenAvailable(By.XPath(Elements.Xpath[Reference.Dialogs.WarningCloseButton]), TimeSpan.FromSeconds(5),
+                    "The alert dialog has no OK button.");
 
                 return true;
             });
@@ -164,25 +158,15 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
             //Passing true clicks the Activate/Deactivate button.  Passing false clicks the Cancel button.
             return Client.Execute(Client.GetOptions($"Interact with Set State Dialog"), driver =>
             {
-                var inlineDialog = this.SwitchToDialog();
-                if (inlineDialog)
-                {
-                    //Wait until the buttons are available to click
-                    var dialog = driver.WaitUntilAvailable(DialogsElementsLocators.SetStateDialog);
+                if (!this.SwitchToDialog())
+                    throw new InvalidOperationException("No set state dialog is displayed.");
 
-                    if (
-                        !(dialog?.FindElements(By.TagName("button")).Count >
-                          0)) return true;
-
-                    //Click the Activate/Deactivate or Cancel button
-                    IWebElement buttonToClick;
-                    if (clickOkButton)
-                        buttonToClick = dialog.FindElement(DialogsElementsLocators.SetStateActionButton);
-                    else
-                        buttonToClick = dialog.FindElement(DialogsElementsLocators.SetStateCancelButton);
-
-                    buttonToClick.Click();
-                }
+                var dialog = driver.WaitUntilAvailable(DialogsElementsLocators.SetStateDialog, TimeSpan.FromSeconds(5),
+                    "The displayed dialog is not the set state dialog.");
+                dialog.ClickWhenAvailable(
+                    clickOkButton ? DialogsElementsLocators.SetStateActionButton : DialogsElementsLocators.SetStateCancelButton,
+                    TimeSpan.FromSeconds(5),
+                    $"The set state dialog has no {(clickOkButton ? "action" : "cancel")} button.");
 
                 return true;
             });
