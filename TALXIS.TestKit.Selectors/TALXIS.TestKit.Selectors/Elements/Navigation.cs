@@ -104,7 +104,8 @@ namespace TALXIS.TestKit.Selectors
         /// <param name="area">Name of the area</param>
         public void OpenSubArea(string area)
         {
-            _navigationManager.OpenSubArea(area);
+            if (!_navigationManager.OpenSubArea(area).Value)
+                throw new InvalidOperationException($"No sub area '{area}' to open.");
         }
 
         /// <summary>

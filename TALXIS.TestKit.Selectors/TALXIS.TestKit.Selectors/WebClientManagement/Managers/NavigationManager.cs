@@ -666,15 +666,18 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
         {
             return Client.Execute<IWebElement>(Client.GetOptions("Get SubArea Element"), driver =>
             {
-                return driver.WaitUntilAvailable(By.XPath($"//img[@title='{subArea}']"));
+                return driver.WaitUntilAvailable(SubAreaLocator(subArea));
             }).Value;
         }
 
         internal bool IsSubAreaVisible(string subArea)
         {
             return Client.Execute<bool>(Client.GetNoRetryOptions("Is SubArea Visible"), driver =>
-                driver.FindElements(By.XPath(AppElements.Xpath[AppReference.Navigation.SubAreaImage].Replace("[LABEL]", subArea.ToXPathLiteral()))).Count > 0);
+                driver.FindElements(SubAreaLocator(subArea)).Count > 0);
         }
+
+        private static By SubAreaLocator(string subArea) =>
+            By.XPath(AppElements.Xpath[AppReference.Navigation.SubAreaImage].Replace("[LABEL]", subArea.ToXPathLiteral()));
 
         internal string GetGroupText(string groupName)
         {

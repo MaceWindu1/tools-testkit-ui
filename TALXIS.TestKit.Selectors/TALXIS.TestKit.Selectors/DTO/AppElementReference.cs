@@ -414,7 +414,8 @@ namespace TALXIS.TestKit.Selectors
             { "Nav_AreaMenu"       , "//*[@data-lp-id='sitemap-area-switcher-flyout']"},
             { "Nav_AreaMoreMenu"       , "//ul[@role=\"menubar\"]"},
             { "Nav_SubAreaContainer"       , "//*[@data-id=\"navbar-container\"]/div/ul"},
-            { "Nav_SubAreaImage"           , "//img[@title=[LABEL]]"},
+            // A site map item names itself in data-text; its icon is an inline svg, an img in older versions.
+            { "Nav_SubAreaImage"           , "//li[starts-with(@data-id,'sitemap-') and @data-text=[LABEL]] | //img[@title=[LABEL]]"},
             // The toggle of the new look in the app's header; an app that only has the new look does not show it.
             { "Nav_NewLookToggle"          , "//button[contains(concat(' ', normalize-space(@class), ' '), ' ms-Toggle-background ')]"},
             { "Nav_WebAppMenuButton"       , "//*[@id=\"TabArrowDivider\"]/a"},
@@ -432,7 +433,8 @@ namespace TALXIS.TestKit.Selectors
             //{ "Nav_AdminPortal"       , "//*[@id=(\"id-5\")]"},
             { "Nav_AdminPortal"       , "//*[contains(@data-id,'officewaffle')]"},
             { "Nav_AdminPortalButton" , "//*[@id=(\"O365_AppTile_Admin\")]"},
-            { "Nav_SearchButton" , "//*[@id=\"searchLauncher\"]/button"},
+            // The button is wrapped in a tooltip host in the current UI.
+            { "Nav_SearchButton" , "//*[@id=\"searchLauncher\"]//button"},
             { "Nav_Search",                "//*[@id=\"categorizedSearchInputAndButton\"]"},
             { "Nav_QuickLaunchMenu",                "//div[contains(@data-id,'quick-launch-bar')]"},
             { "Nav_QuickLaunchButton",                "//li[contains(@title, '[NAME]')]"},
