@@ -666,8 +666,8 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
 
             return this.Client.Execute($"Get OptionSet Value: {controlName}", driver =>
             {
-                var xpathToFieldContainer = EntityElementsLocators.OptionSetFieldContainer(controlName);
-                var fieldContainer = driver.WaitUntilAvailable(xpathToFieldContainer);
+                // The field's section item holds every rendering of the column (select or Fluent dropdown).
+                var fieldContainer = driver.WaitUntilAvailable(EntityElementsLocators.TextFieldContainer(controlName));
                 string result = TryGetValue(fieldContainer, control);
 
                 return result;
@@ -686,6 +686,10 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
                 var check = false;
 
                 var fieldContainer = driver.WaitUntilAvailable(EntityElementsLocators.TextFieldContainer(option.Name));
+
+                var dropdown = FluentDropdownHelper.FindButton(fieldContainer, option.Name);
+                if (dropdown != null)
+                    return FluentDropdownHelper.GetTwoOptionValue(driver, dropdown);
 
                 var hasRadio = fieldContainer.HasElement(EntityElementsLocators.EntityBooleanFieldRadioContainer(option.Name));
                 var hasCheckbox = fieldContainer.HasElement(EntityElementsLocators.EntityBooleanFieldCheckbox(option.Name));
@@ -1241,6 +1245,10 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement
             }
 
             var name = control.Name;
+            var dropdown = FluentDropdownHelper.FindButton(fieldContainer, name);
+            if (dropdown != null)
+                return FluentDropdownHelper.GetSelectedLabel(dropdown);
+
             var hasStatusCombo = fieldContainer.HasElement(EntityElementsLocators.EntityNewLookOptionsetStatusCombo(name));
             if (hasStatusCombo)
             {

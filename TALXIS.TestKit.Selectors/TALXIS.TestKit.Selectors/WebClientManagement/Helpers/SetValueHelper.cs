@@ -537,6 +537,14 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
             }
 
             var name = control.Name;
+            var dropdown = FluentDropdownHelper.FindButton(fieldContainer, name);
+            if (dropdown != null)
+            {
+                // Clearing a choice sets "-1": the dropdown's no-value option clears it.
+                FluentDropdownHelper.SelectOption(client.Browser.Driver, dropdown, value == "-1" ? null : value);
+                return;
+            }
+
             var hasStatusCombo = fieldContainer.HasElement(EntityElementsLocators.EntityNewLookOptionsetStatusCombo(name));
 
             if (hasStatusCombo)
@@ -558,7 +566,8 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
 
         private static void SelectOption(WebClient client, ReadOnlyCollection<IWebElement> options, string value)
         {
-            var selectedOption = options.FirstOrDefault(op => op.Text == value || op.GetAttribute("value") == value);
+            var selectedOption = options.FirstOrDefault(op => op.Text == value || op.GetAttribute("value") == value)
+                ?? throw new InvalidOperationException($"No option '{value}' to select.");
             client.ThinkTime(1500);
             selectedOption.Click(true);
             client.ThinkTime(1500);
@@ -578,6 +587,14 @@ namespace TALXIS.TestKit.Selectors.WebClientManagement.Helpers
 
                 IWebElement fieldContainer = null;
                 fieldContainer = ValidateFormContext(client, driver, formContextType, option.Name, fieldContainer);
+
+                var dropdown = FluentDropdownHelper.FindButton(fieldContainer, option.Name);
+                if (dropdown != null)
+                {
+                    FluentDropdownHelper.SetTwoOptionValue(driver, dropdown, option.Value);
+                    driver.WaitForTransaction();
+                    return true;
+                }
 
                 var hasRadio = fieldContainer.HasElement(EntityElementsLocators.EntityBooleanFieldRadioContainer(option.Name));
                 var hasCheckbox = fieldContainer.HasElement(EntityElementsLocators.EntityBooleanFieldCheckbox(option.Name));
